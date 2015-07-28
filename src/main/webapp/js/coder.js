@@ -1,28 +1,30 @@
-Registers = [
-    {"register": "AL", "types": ["G","E"], "Name": "AL", "Type": "Main Register", "bits": 8},
-    {"register": "BL", "types": ["G","E"], "Name": "BL", "Type": "Main Register", "bits": 8},
-    {"register": "CL", "types": ["G","E"], "Name": "CL", "Type": "Main Register", "bits": 8},
-    {"register": "DL", "types": ["G","E"], "Name": "DL", "Type": "Main Register", "bits": 8},
-    {"register": "AH", "types": ["G","E"], "Name": "AH", "Type": "Main Register", "bits": 8},
-    {"register": "BH", "types": ["G","E"], "Name": "BH", "Type": "Main Register", "bits": 8},
-    {"register": "CH", "types": ["G","E"], "Name": "CH", "Type": "Main Register", "bits": 8},
-    {"register": "DH", "types": ["G","E"], "Name": "DH", "Type": "Main Register", "bits": 8},
-    {"register": "AX", "types": ["G","E"], "Name": "AX", "Type": "Main Register", "bits": 16},
-    {"register": "BX", "types": ["G","E"], "Name": "BX", "Type": "Main Register", "bits": 16},
-    {"register": "CX", "types": ["G","E"], "Name": "CX", "Type": "Main Register", "bits": 16},
-    {"register": "DX", "types": ["G","E"], "Name": "DX", "Type": "Main Register", "bits": 16},
-    {"register": "SI", "Name": "Source Index", "Type": "Index register", "bits": 16},
-    {"register": "DI", "Name": "Destination Index", "Type": "Index register", "bits": 16},
-    {"register": "SP", "Name": "Stack Pointer", "Type": "Index register", "bits": 16},
-    {"register": "BP", "Name": "Base Pointer", "Type": "Index register", "bits": 16},
-    {"register": "CS", "types": ["S"], "Name": "Code Segment", "Type": "Segment register", "bits": 16},
-    {"register": "DS", "types": ["S"], "Name": "Data Segment", "Type": "Segment register", "bits": 16},
-    {"register": "ES", "types": ["S"], "Name": "Extra Segment", "Type": "Segment register", "bits": 16},
-    {"register": "SS", "types": ["S"], "Name": "Stack Segment", "Type": "Segment register", "bits": 16}
+"use strict";
+
+var Registers = [
+    {"register": "AL", "bits": 8, "types": ["G","E"], "RegBits": "000", "Name": "AL", "Type": "Main Register"},
+    {"register": "BL", "bits": 8, "types": ["G","E"], "RegBits": "010", "Name": "BL", "Type": "Main Register"},
+    {"register": "CL", "bits": 8, "types": ["G","E"], "RegBits": "001", "Name": "CL", "Type": "Main Register"},
+    {"register": "DL", "bits": 8, "types": ["G","E"], "RegBits": "011", "Name": "DL", "Type": "Main Register"},
+    {"register": "AH", "bits": 8, "types": ["G","E"], "RegBits": "100", "Name": "AH", "Type": "Main Register"},
+    {"register": "BH", "bits": 8, "types": ["G","E"], "RegBits": "111", "Name": "BH", "Type": "Main Register"},
+    {"register": "CH", "bits": 8, "types": ["G","E"], "RegBits": "101", "Name": "CH", "Type": "Main Register"},
+    {"register": "DH", "bits": 8, "types": ["G","E"], "RegBits": "110", "Name": "DH", "Type": "Main Register"},
+    {"register": "AX", "bits": 16, "types": ["G","E"], "RegBits": "000", "Name": "AX", "Type": "Main Register"},
+    {"register": "BX", "bits": 16, "types": ["G","E"], "RegBits": "011", "Name": "BX", "Type": "Main Register"},
+    {"register": "CX", "bits": 16, "types": ["G","E"], "RegBits": "001", "Name": "CX", "Type": "Main Register"},
+    {"register": "DX", "bits": 16, "types": ["G","E"], "RegBits": "010", "Name": "DX", "Type": "Main Register"},
+    {"register": "SI", "bits": 16, "types": [], "RegBits": "110", "Name": "Source Index", "Type": "Index register"},
+    {"register": "DI", "bits": 16, "types": [], "RegBits": "111", "Name": "Destination Index", "Type": "Index register"},
+    {"register": "SP", "bits": 16, "types": [], "RegBits": "100", "Name": "Stack Pointer", "Type": "Index register"},
+    {"register": "BP", "bits": 16, "types": [], "RegBits": "101", "Name": "Base Pointer", "Type": "Index register"},
+    {"register": "CS", "bits": 16, "types": ["S"], "RegBits": "01", "Name": "Code Segment", "Type": "Segment register"},
+    {"register": "DS", "bits": 16, "types": ["S"], "RegBits": "11", "Name": "Data Segment", "Type": "Segment register"},
+    {"register": "ES", "bits": 16, "types": ["S"], "RegBits": "00", "Name": "Extra Segment", "Type": "Segment register"},
+    {"register": "SS", "bits": 16, "types": ["S"], "RegBits": "10", "Name": "Stack Segment", "Type": "Segment register"}
 ];
 
 //TODO: Add what instructions they are valid for
-Prefixs = [
+var Prefixs = [
     {"prefix": "LOCK", "name": "Lock (Preform as atomic)"},
     {"prefix": "REP", "name": "Repeat for Count"},
     {"prefix": "REPE", "name": "Repeat for Count or Equal"},
@@ -31,7 +33,7 @@ Prefixs = [
     {"prefix": "REPNZ", "name": "Repeat for Count or Not Zero"}
 ];
 
-Instructions = [
+var Instructions = [
     {"instruction": "AAA", "name": "ASCII adjust AL after addition"},
     {"instruction": "AAD", "name": "ASCII adjust AX before division"},
     {"instruction": "AAM", "name": "ASCII adjust AX after multiplication"},
@@ -51,11 +53,35 @@ Instructions = [
         "name": "Add",
         "operandCount": 2,
         "opcodes": [
-            {"code": "00", "operands": ["G", "E"], "size": 8},
-            {"code": "01", "operands": ["G", "E"], "size": 16},
-            {"code": "02", "operands": ["E", "G"], "size": 8},
-            {"code": "03", "operands": ["E", "G"], "size": 16}
-        ]},
+            {"code": "0000000011rrrrrr", "operands": ["G", "G"], "size": 8}, //1 -> 2
+            {"code": "0000000111rrrrrr", "operands": ["G", "G"], "size": 16},//1 -> 2
+            {"code": "00000000mmrrrrrr", "operands": ["G", "M"], "size": 8}, //1 -> 2
+            {"code": "00000001mmrrrrrr", "operands": ["G", "M"], "size": 16},//1 -> 2
+            {"code": "0000001011rrrrrr", "operands": ["G", "G"], "size": 8}, //2 -> 1
+            {"code": "0000001111rrrrrr", "operands": ["G", "G"], "size": 16},//2 -> 1
+            {"code": "00000010mmrrrrrr", "operands": ["G", "M"], "size": 8}, //2 -> 1
+            {"code": "00000011mmrrrrrr", "operands": ["G", "M"], "size": 16},//2 -> 1
+            {"code": "1000000011000rrr", "operands": ["G", "I"], "size": 8}, //I -> R
+            {"code": "10000000mm100rrr", "operands": ["M", "I"], "size": 8}, //I -> M
+            {"code": "1000000111000rrr", "operands": ["G", "I"], "size": 16},//I -> R
+            {"code": "10000001mm100rrr", "operands": ["M", "I"], "size": 16},//I -> M
+            //sign extend version
+            //{"code": "10000010", "operands": ["E", "I"], "size": 8},
+            //{"code": "10000011", "operands": ["E", "I"], "size": 16}
+        ],
+        "getCode": function (op, op1, op2) {
+            var opcode = this.opcodes[op];
+            var out = opcode.code.replace("rrr", op1.RegBits);
+
+            if (this.opcodes[op].operands[1] === "I") {
+                out = out + op2.getBytes(opcode.size);
+            } else {
+                out = out.replace("rrr", op2.RegBits);
+            }
+
+            return out;
+        }
+    },
     {"instruction": "AND", "name": "Logical AND"},
     {"instruction": "CALL", "name": "Call procedure"},
     {"instruction": "CBW", "name": "Convert byte to word"},
@@ -124,7 +150,40 @@ Instructions = [
     {"instruction": "LOOPNE", "name": "Loop control and Not Equal"},
     {"instruction": "LOOPZ", "name": "Loop control and Zero"},
     {"instruction": "LOOPNZ", "name": "Loop control and Not Zero"},
-    {"instruction": "MOV", "name": "Move"},
+    {
+        "instruction": "MOV",
+        "name": "Move",
+        "operandCount": 2,
+        "opcodes": [
+            {"code": "1000100011rrrrrr", "operands": ["G", "G"], "size": 8}, //1 -> 2
+            {"code": "1000100111rrrrrr", "operands": ["G", "G"], "size": 16},//1 -> 2
+            {"code": "1000101011rrrrrr", "operands": ["G", "G"], "size": 8}, //2 -> 1
+            {"code": "1000101111rrrrrr", "operands": ["G", "G"], "size": 16},//2 -> 1
+            {"code": "10001000mmrrrrrr", "operands": ["G", "M"], "size": 8}, //1 -> 2
+            {"code": "10001001mmrrrrrr", "operands": ["G", "M"], "size": 16},//1 -> 2
+            {"code": "10001010mmrrrrrr", "operands": ["G", "M"], "size": 8}, //2 -> 1
+            {"code": "10001011mmrrrrrr", "operands": ["G", "M"], "size": 16},//2 -> 1
+            {"code": "1100011011000rrr", "operands": ["G", "I"], "size": 8}, //I -> R
+            {"code": "1100011111000rrr", "operands": ["G", "I"], "size": 16},//I -> R
+            //{"code": "10000000mm100rrr", "operands": ["M", "I"], "size": 8}, //I -> M
+            //{"code": "10000001mm100rrr", "operands": ["M", "I"], "size": 16},//I -> M
+            //sign extend version
+            //{"code": "10000010", "operands": ["E", "I"], "size": 8},
+            //{"code": "10000011", "operands": ["E", "I"], "size": 16}
+        ],
+        "getCode": function (op, op1, op2) {
+            var opcode = this.opcodes[op];
+            var out = opcode.code.replace("rrr", op1.RegBits);
+
+            if (this.opcodes[op].operands[1] === "I") {
+                out = out + op2.getBytes(opcode.size);
+            } else {
+                out = out.replace("rrr", op2.RegBits);
+            }
+
+            return out;
+        }
+    },
     {"instruction": "MOVSB", "name": "Move byte from string to string"},
     {"instruction": "MOVSW", "name": "Move word from string to string"},
     {"instruction": "MUL", "name": "Unsigned multiply"},
@@ -183,77 +242,76 @@ Instructions = [
     {"instruction": "XOR", "name": "Exclusive OR"}
 ];
 
+var WHITESPACE = [" ", "\t"];
+
 function Scanner(code) {
     this.code = code + "";
     this.pos = 0;
-    var whitespace = [" ", "\t"];
-
-    this.isEof = function() {
-        return this.code.length <= this.pos;
-    };
-
-    this.getCurrentChar = function() {
-        return this.code.charAt(this.pos);
-    };
-
-    this.skipChar = function() {
-        this.pos++;
-    };
-
-    this.skipChars = function(skipChars) {
-        var data = this.code;
-        var i = this.pos;
-
-        for (; i < data.length; i++) {
-            var value = data.charAt(i);
-
-            if (-1 === skipChars.indexOf(value)) {
-                break;
-            }
-        }
-
-        this.pos = i;
-    };
-
-    this.getChars = function(endChars) {
-        var data = this.code;
-        var i = this.pos;
-
-        for (; i < data.length; i++) {
-            var value = data.charAt(i);
-
-            if (-1 !== endChars.indexOf(value)) {
-                break;
-            }
-        }
-
-        var returnVal = data.substring(this.pos, i);
-        this.pos = i;
-
-        return returnVal;
-    };
-
-    this.lookChars = function(endChars) {
-        var data = this.code;
-        var i = this.pos;
-
-        for (; i < data.length; i++) {
-            var value = data.charAt(i);
-
-            if (-1 !== endChars.indexOf(value)) {
-                break;
-            }
-        }
-
-        var returnVal = data.substring(this.pos, i);
-
-        return returnVal;
-    };
-
-    this.skipWhitespace = function() {
-        this.skipChars(whitespace);
-    };
 }
+
+Scanner.prototype.isEof = function() {
+    return this.code.length <= this.pos;
+};
+
+Scanner.prototype.getCurrentChar = function() {
+    return this.code.charAt(this.pos);
+};
+
+Scanner.prototype.skipChar = function() {
+    this.pos++;
+};
+
+Scanner.prototype.skipChars = function(skipChars) {
+    var data = this.code;
+    var i = this.pos;
+
+    for (; i < data.length; i++) {
+        var value = data.charAt(i);
+
+        if (-1 === skipChars.indexOf(value)) {
+            break;
+        }
+    }
+
+    this.pos = i;
+};
+
+Scanner.prototype.getChars = function(endChars) {
+    var data = this.code;
+    var i = this.pos;
+
+    for (; i < data.length; i++) {
+        var value = data.charAt(i);
+
+        if (-1 !== endChars.indexOf(value)) {
+            break;
+        }
+    }
+
+    var returnVal = data.substring(this.pos, i);
+    this.pos = i;
+
+    return returnVal;
+};
+
+Scanner.prototype.lookChars = function(endChars) {
+    var data = this.code;
+    var i = this.pos;
+
+    for (; i < data.length; i++) {
+        var value = data.charAt(i);
+
+        if (-1 !== endChars.indexOf(value)) {
+            break;
+        }
+    }
+
+    return data.substring(this.pos, i);
+};
+
+Scanner.prototype.skipWhitespace = function() {
+    this.skipChars(WHITESPACE);
+};
 
 function copyData(from, to) {
     for (var attr in from) {
@@ -285,6 +343,7 @@ function Instruction(instruction) {
 }
 
 function Operand() {
+
 }
 
 function Register(register) {
@@ -298,20 +357,38 @@ function Register(register) {
 Register.prototype = new Operand();
 
 function Immediate(str) {
+    var value;
     var number = str;
     var type = "";
     var lastChar = number[number.length - 1];
     if (lastChar === "b") {
         type = "Binary";
+        value = parseInt(number.substr(0, number.length - 1), 2);
     } else if (lastChar === "o") {
         type = "Octal";
+        value = parseInt(number.substr(0, number.length - 1), 8);
     } else if (lastChar === "h") {
         type = "Hexadecimal";
+        value = parseInt(number.substr(0, number.length - 1), 16);
     } else {
         type = "Decimal";
+        value = parseInt(number, 10);
     }
 
-    this.toString = function() {
+    this.types = ["I"];
+
+    this.getBytes = function (bits) {
+        var strVal = value.toString(2);
+        if (strVal.length > bits) {
+            console.log("Immediate too large: " + strVal + " (" + strVal.length + " bits wanted " + bits + " bits");
+        }
+        while (strVal.length < bits) {
+            strVal = "0" + strVal;
+        }
+        return strVal;
+    };
+
+    this.toString = function () {
         return type + " Number (" + number.fontcolor("red") + ")";
     };
 }
@@ -333,61 +410,64 @@ function Newline() {
 function Tokeniser(code) {
     this.tokens = [];
     this.token = 0;
+    this.scanner = new Scanner(code);
+}
 
-    var scanner = new Scanner(code);
+Tokeniser.prototype.nextToken = function() {
+    var val, tok, j;
 
-    this.nextToken = function() {
-        while (!scanner.isEof()) {
-            scanner.skipWhitespace();
-            if (!scanner.isEof()) {
-                var val = scanner.getCurrentChar();
-                if (/^[a-z]$/i.test(val)) {
-                    var tok = scanner.getChars([" ", ";", "\n", "\t", ","]);
-                    if (tok.indexOf(":", tok.length - 1) !== -1) {
-                        return new Label(tok.substring(0, tok.length - 1));
-                    } else {
-                        for (var j = 0; j < Prefixs.length; j++) {
-                            if (Prefixs[j].prefix === tok) {
-                                return new Prefix(tok);
-                            }
-                        }
-                        for (var j = 0; j < Instructions.length; j++) {
-                            if (Instructions[j].instruction === tok) {
-                                return new Instruction(Instructions[j]);
-                            }
-                        }
-                        for (var j = 0; j < Registers.length; j++) {
-                            if (Registers[j].register === tok) {
-                                return new Register(Registers[j]);
-                            }
-                        }
+    while (!this.scanner.isEof()) {
+        this.scanner.skipWhitespace();
+        if (!this.scanner.isEof()) {
+            val = this.scanner.getCurrentChar();
 
-                        return tok;
-                    }
-                } else if (/^[0-9]$/i.test(val)) {
-                    return new Immediate(scanner.getChars([" ", ";", "\n", "\t", ","]));
-                } else if (/^[;]$/i.test(val)) {
-                    scanner.skipChars(["\n"]);
-                    //this.tokens.push(new Comment());
-                } else if (/^[,]$/i.test(val)) {
-                    scanner.skipChar();
-                    return new Comma();
-                } else if (/^[\n]$/i.test(val)) {
-                    scanner.skipChar();
-                    return new Newline();
+            if (/^[a-z]$/i.test(val)) {
+                tok = this.scanner.getChars([" ", ";", "\n", "\t", ","]);
+                if (tok.indexOf(":", tok.length - 1) !== -1) {
+                    return new Label(tok.substring(0, tok.length - 1));
                 } else {
-                    scanner.skipChar();
-                    console.log("Unknown char: '" + val + "' char value: " + val.charCodeAt(0));
+                    for (j = 0; j < Prefixs.length; j++) {
+                        if (Prefixs[j].prefix === tok) {
+                            return new Prefix(tok);
+                        }
+                    }
+                    for (j = 0; j < Instructions.length; j++) {
+                        if (Instructions[j].instruction === tok) {
+                            return new Instruction(Instructions[j]);
+                        }
+                    }
+                    for (j = 0; j < Registers.length; j++) {
+                        if (Registers[j].register === tok) {
+                            return new Register(Registers[j]);
+                        }
+                    }
+
+                    return tok;
                 }
+            } else if (/^[0-9]$/i.test(val)) {
+                return new Immediate(this.scanner.getChars([" ", ";", "\n", "\t", ","]));
+            } else if (/^[;]$/i.test(val)) {
+                this.scanner.skipChars(["\n"]);
+                //this.tokens.push(new Comment());
+            } else if (/^[,]$/i.test(val)) {
+                this.scanner.skipChar();
+                return new Comma();
+            } else if (/^[\n]$/i.test(val)) {
+                this.scanner.skipChar();
+                return new Newline();
+            } else {
+                this.scanner.skipChar();
+                console.log("Unknown char: '" + val + "' char value: " + val.charCodeAt(0));
             }
         }
-        return "";
-    };
+    }
 
-    this.hasMoreTokens = function() {
-        return !scanner.isEof();
-    };
-}
+    return "";
+};
+
+Tokeniser.prototype.hasMoreTokens = function() {
+    return !this.scanner.isEof();
+};
 
 function Parse(text) {
     var tokeniser = new Tokeniser(text);
@@ -405,120 +485,134 @@ function Parse(text) {
 }
 
 
-function Assemble(tokens) {
-    function getToken() {
-        var t = tokens[0];
-        tokens.shift();
-        return t;
+function assemble(tokens) {
+    function moreTokens() {
+        return 0 !== tokens.length;
     }
 
-    var output = "";
+    function getToken() {
+        return tokens.shift();
+    }
 
-    while (0 !== tokens.length) {
-        var token = getToken();
+    var output = "", hexOutput = "", opcode, bitCount, token, prefix, instruction, operands, ok, j;
 
-        var prefix = null;
-
-        if (token instanceof Prefix) {
-            prefix = token;
-            output += "Prefixes not yet supported.<br/>";
+    try {
+        while (moreTokens()) {
             token = getToken();
-        }
+            prefix = null;
 
-        if (token instanceof Instruction) {
-            var instruction = token;
-            var operands = [];
-            if (instruction.operandCount !== undefined) {
-                var ok = true;
+            if (token instanceof Prefix) {
+                prefix = token;
+                output += "Prefixes not yet supported.<br/>";
+                token = getToken();
+            }
 
-                for (var j = 0; j < instruction.operandCount; j++) {
-                    token = getToken();
+            if (token instanceof Instruction) {
+                instruction = token;
+                operands = [];
+                if (instruction.operandCount !== undefined) {
+                    ok = true;
 
-                    if (j !== 0) {
-                        if (!(token instanceof Comma)) {
-                            output += "Bad format for: " + instruction.toString() + "<br/>";
-                            output += "Expected comma, found: " + token.toString() + "<br/>";
-                            ok = false;
+                    for (j = 0; j < instruction.operandCount; j++) {
+                        token = getToken();
+
+                        if (token === undefined) {
                             break;
-                        } else {
-                            token = getToken();
                         }
-                    }
 
-                    if (token instanceof Operand) {
-                        operands.push(token);
-                    } else {
-                        output += "Bad format for: " + instruction.toString() + "<br/>";
-                        output += "Expected operand, found: " + token.toString() + "<br/>";
-                        ok = false;
-                        break;
-                    }
-                }
-
-                if (ok) {
-                    //output += instruction.toString() + "<br/>";
-                    var opcode = null;
-                    bitCount = operands[0].bits;
-                    for (var l=0; l<instruction.opcodes.length; l++) {
-                        var code = instruction.opcodes[l];
-                        var validOp = false;
-                        if (code.size == bitCount && code.operands.length == operands.length) {
-                            validOp = true;
-                            for (var k=0; k<operands.length; k++) {
-                                if (-1 == operands[k].types.indexOf(code.operands[k])) {
-                                    validOp = false;
-                                    break;
-                                }
+                        if (j !== 0) {
+                            if (!(token instanceof Comma)) {
+                                output += "Bad format for: " + instruction.toString() + "<br/>";
+                                output += "Expected comma, found: " + token.toString() + "<br/>";
+                                ok = false;
+                                break;
+                            } else {
+                                token = getToken();
                             }
                         }
-                        
-                        if (validOp == true) {
-                            output += code.code + "<br/>";
+
+                        if (token instanceof Operand) {
+                            operands.push(token);
+                        } else {
+                            output += "Bad format for: " + instruction.toString() + "<br/>";
+                            output += "Expected operand, found: " + token.toString() + "<br/>";
+                            ok = false;
                             break;
                         }
                     }
+
+                    if (ok) {
+                        output += instruction.toString() + "<br/>";
+                        opcode = null;
+                        bitCount = operands[0].bits;
+                        for (var l = 0; l < instruction.opcodes.length; l++) {
+                            var code = instruction.opcodes[l];
+                            var validOp = false;
+                            if (code.size == bitCount && code.operands.length == operands.length) {
+                                validOp = true;
+                                for (var k = 0; k < operands.length; k++) {
+                                    if (-1 == operands[k].types.indexOf(code.operands[k])) {
+                                        validOp = false;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (validOp == true) {
+                                if (instruction.getCode) {
+                                    output += instruction.getCode(l, operands[0], operands[1]) + "<br/>";
+                                } else {
+                                    output += code.code + "<br/>";
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    // Match newline
+                    if (tokens.length > 0 && tokens[0] instanceof Newline) {
+                        token = getToken();
+                    }
+
+                } else {
+                    // expected instruction
+                    output += "Instruction not yet supported: " + instruction.toString() + "<br/>";
+
+                    while (!(tokens[0] instanceof Prefix || tokens[0] instanceof Instruction) && 0 !== tokens.length) {
+                        token = getToken();
+                        output += "Ignoring tokens until instruction found: " + token.toString() + "<br/>";
+                    }
                 }
-                
-                // Match newline
-                if (tokens[0] instanceof Newline) {
-                    token = getToken();
-                }
-                
             } else {
                 // expected instruction
-                output += "Instruction not yet supported: " + instruction.toString() + "<br/>";
+                output += "Expected instruction found: " + token.toString() + "<br/>";
 
                 while (!(tokens[0] instanceof Prefix || tokens[0] instanceof Instruction) && 0 !== tokens.length) {
                     token = getToken();
-                    output += "Ignoring tokens until instruction found: " + token.toString() + "<br/>";
+                    output += "Expected instruction found: " + token.toString() + "<br/>";
                 }
             }
-        } else {
-            // expected instruction
-            output += "Expected instruction found: " + token.toString() + "<br/>";
-
-            while (!(tokens[0] instanceof Prefix || tokens[0] instanceof Instruction) && 0 !== tokens.length) {
-                token = getToken();
-                output += "Expected instruction found: " + token.toString() + "<br/>";
-            }
         }
+    } catch (e) {
+        console.log(e);
     }
 
     return output;
 }
 
-function Ctrl($scope, $log) {
+function Ctrl($scope, $log, $sce) {
     $scope.codeView = function() {
         var parse = new Parse($scope.code);
         $scope.asm = parse.asm;
         $scope.tokens = parse.tokens;
-        return $scope.asm;
+        return $sce.trustAsHtml($scope.asm);
     };
 
     $scope.machineView = function() {
-        return Assemble($scope.tokens);//$scope.asm;
+        $scope.machine = assemble($scope.tokens.slice());
+        return $sce.trustAsHtml($scope.machine);
     };
 
-    $scope.code = "MOV AX, CX\nINC AX\nlabel:\nXOR AX, 01010101b\nAND BX, 0FFh";
+    $scope.code = "ADD AX, 0\nMOV AX, CX\nINC AX\nlabel:\nXOR AX, 01010101b\nAND BX, 0FFh";
 }
 
