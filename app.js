@@ -1,10 +1,10 @@
 "use strict";
 
-var http = require("http"),
-    fs = require("fs"),
-    path = require("path");
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
 
-var port = 3333;
+const port = 3333;
 
 function onRequest(request, response) {
     var pathname = request.url,
@@ -16,8 +16,8 @@ function onRequest(request, response) {
         pathname = "/index.html";
     }
 
-    pathname = "./src/main/webapp/" + pathname;
-    var ext = path.extname(pathname);
+    pathname = "./src/" + pathname;
+    const ext = path.extname(pathname);
 
     switch (ext) {
         case ".js":
@@ -30,7 +30,7 @@ function onRequest(request, response) {
 
     try {
         if (fs.existsSync(pathname)) {
-            var stream = fs.createReadStream(pathname);
+            const stream = fs.createReadStream(pathname);
             response.writeHead(200, {"Content-Type": content});
             stream.pipe(response);
         } else {
