@@ -1,28 +1,29 @@
-function Grammar() {
-}
-;
+"use strict";
 
-Grammar.prototype = {
-    addRule: function addRule(name, rule) {
+class Grammer {
+    addRule (name, rule) {
         this[name] = rule.converted ? rule :
-                convertRule(rule instanceof Array ? rule.slice(0) : [rule]);
+            convertRule(rule instanceof Array ? rule.slice(0) : [rule]);
         this[name].name = name;
-    },
-    reset: function() {
+    }
+
+    reset () {
         Object.keys(this).forEach(function(name) {
             if (this.hasOwnProperty(name)) {
                 delete this[name];
             }
         });
-    },
-    generate: function generate() {
+    }
+
+    generate () {
         for (var name in this) {
             if (this.hasOwnProperty(name)) {
                 this[name] = this.expand(this[name]);
             }
         }
-    },
-    expand: function expand(item) {
+    }
+
+    expand (item) {
         while (typeof item == "function") {
             item = item(this);
         }
@@ -34,7 +35,7 @@ Grammar.prototype = {
         }
         return item;
     }
-};
+}
 
 // rules
 function rule(name) {
@@ -65,7 +66,6 @@ function repeat() {
 }
 
 // utilities
-
 function convertRule(rule) {
     if (!rule.length) {
         throw Error("Rule cannot be empty.")

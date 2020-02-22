@@ -1,30 +1,87 @@
 "use strict";
 
-var Registers = [
-    {"register": "AL", "bits": 8, "types": ["G","E"], "RegBits": "000", "Name": "AL", "Type": "Main Register"},
-    {"register": "BL", "bits": 8, "types": ["G","E"], "RegBits": "010", "Name": "BL", "Type": "Main Register"},
-    {"register": "CL", "bits": 8, "types": ["G","E"], "RegBits": "001", "Name": "CL", "Type": "Main Register"},
-    {"register": "DL", "bits": 8, "types": ["G","E"], "RegBits": "011", "Name": "DL", "Type": "Main Register"},
-    {"register": "AH", "bits": 8, "types": ["G","E"], "RegBits": "100", "Name": "AH", "Type": "Main Register"},
-    {"register": "BH", "bits": 8, "types": ["G","E"], "RegBits": "111", "Name": "BH", "Type": "Main Register"},
-    {"register": "CH", "bits": 8, "types": ["G","E"], "RegBits": "101", "Name": "CH", "Type": "Main Register"},
-    {"register": "DH", "bits": 8, "types": ["G","E"], "RegBits": "110", "Name": "DH", "Type": "Main Register"},
-    {"register": "AX", "bits": 16, "types": ["G","E"], "RegBits": "000", "Name": "AX", "Type": "Main Register"},
-    {"register": "BX", "bits": 16, "types": ["G","E"], "RegBits": "011", "Name": "BX", "Type": "Main Register"},
-    {"register": "CX", "bits": 16, "types": ["G","E"], "RegBits": "001", "Name": "CX", "Type": "Main Register"},
-    {"register": "DX", "bits": 16, "types": ["G","E"], "RegBits": "010", "Name": "DX", "Type": "Main Register"},
-    {"register": "SI", "bits": 16, "types": [], "RegBits": "110", "Name": "Source Index", "Type": "Index register"},
-    {"register": "DI", "bits": 16, "types": [], "RegBits": "111", "Name": "Destination Index", "Type": "Index register"},
-    {"register": "SP", "bits": 16, "types": [], "RegBits": "100", "Name": "Stack Pointer", "Type": "Index register"},
-    {"register": "BP", "bits": 16, "types": [], "RegBits": "101", "Name": "Base Pointer", "Type": "Index register"},
-    {"register": "CS", "bits": 16, "types": ["S"], "RegBits": "01", "Name": "Code Segment", "Type": "Segment register"},
-    {"register": "DS", "bits": 16, "types": ["S"], "RegBits": "11", "Name": "Data Segment", "Type": "Segment register"},
-    {"register": "ES", "bits": 16, "types": ["S"], "RegBits": "00", "Name": "Extra Segment", "Type": "Segment register"},
-    {"register": "SS", "bits": 16, "types": ["S"], "RegBits": "10", "Name": "Stack Segment", "Type": "Segment register"}
+class Operand {}
+
+class Register  extends Operand {
+    constructor (register, bits, types, regBits, name, type) {
+        super();
+        this.register = register;
+        this.bits = bits;
+        this.types = types;
+        this.regBits = regBits;
+        this.name = name;
+        this.type = type;
+    }
+
+    toString () {
+        return "Register (" + this.register.fontcolor("green") + ")";
+    };
+}
+
+class Immediate extends Operand {
+    constructor (number) {
+        super();
+        let value;
+        let type = "";
+        const lastChar = number[number.length - 1];
+        if (lastChar === "b") {
+            type = "Binary";
+            value = parseInt(number.substr(0, number.length - 1), 2);
+        } else if (lastChar === "o") {
+            type = "Octal";
+            value = parseInt(number.substr(0, number.length - 1), 8);
+        } else if (lastChar === "h") {
+            type = "Hexadecimal";
+            value = parseInt(number.substr(0, number.length - 1), 16);
+        } else {
+            type = "Decimal";
+            value = parseInt(number, 10);
+        }
+
+        this.types = ["I"];
+
+        this.getBytes = function (bits) {
+            var strVal = value.toString(2);
+            if (strVal.length > bits) {
+                console.log("Immediate too large: " + strVal + " (" + strVal.length + " bits wanted " + bits + " bits");
+            }
+            while (strVal.length < bits) {
+                strVal = "0" + strVal;
+            }
+            return strVal;
+        };
+
+        this.toString = function () {
+            return type + " Number (" + number.fontcolor("red") + ")";
+        };
+    }
+}
+
+const Registers = [
+    new Register("AL", 8, ["G","E"], "000", "AL", "Main Register"),
+    new Register("BL", 8, ["G","E"], "010", "BL", "Main Register"),
+    new Register("CL", 8, ["G","E"], "001", "CL", "Main Register"),
+    new Register("DL", 8, ["G","E"], "011", "DL", "Main Register"),
+    new Register("AH", 8, ["G","E"], "100", "AH", "Main Register"),
+    new Register("BH", 8, ["G","E"], "111", "BH", "Main Register"),
+    new Register("CH", 8, ["G","E"], "101", "CH", "Main Register"),
+    new Register("DH", 8, ["G","E"], "110", "DH", "Main Register"),
+    new Register("AX", 16, ["G","E"], "000", "AX", "Main Register"),
+    new Register("BX", 16, ["G","E"], "011", "BX", "Main Register"),
+    new Register("CX", 16, ["G","E"], "001", "CX", "Main Register"),
+    new Register("DX", 16, ["G","E"], "010", "DX", "Main Register"),
+    new Register("SI", 16, [], "110", "Source Index", "Index register"),
+    new Register("DI", 16, [], "111", "Destination Index", "Index register"),
+    new Register("SP", 16, [], "100", "Stack Pointer", "Index register"),
+    new Register("BP", 16, [], "101", "Base Pointer", "Index register"),
+    new Register("CS", 16, ["S"], "01", "Code Segment", "Segment register"),
+    new Register("DS", 16, ["S"], "11", "Data Segment", "Segment register"),
+    new Register("ES", 16, ["S"], "00", "Extra Segment", "Segment register"),
+    new Register("SS", 16, ["S"], "10", "Stack Segment", "Segment register")
 ];
 
 //TODO: Add what instructions they are valid for
-var Prefixs = [
+const Prefixs = [
     {"prefix": "LOCK", "name": "Lock (Preform as atomic)"},
     {"prefix": "REP", "name": "Repeat for Count"},
     {"prefix": "REPE", "name": "Repeat for Count or Equal"},
@@ -33,7 +90,7 @@ var Prefixs = [
     {"prefix": "REPNZ", "name": "Repeat for Count or Not Zero"}
 ];
 
-var Instructions = [
+const Instructions = [
     {"instruction": "AAA", "name": "ASCII adjust AL after addition"},
     {"instruction": "AAD", "name": "ASCII adjust AX before division"},
     {"instruction": "AAM", "name": "ASCII adjust AX after multiplication"},
@@ -70,13 +127,13 @@ var Instructions = [
             //{"code": "10000011", "operands": ["E", "I"], "size": 16}
         ],
         "getCode": function (op, op1, op2) {
-            var opcode = this.opcodes[op];
-            var out = opcode.code.replace("rrr", op1.RegBits);
+            const opcode = this.opcodes[op];
+            let out = opcode.code.replace("rrr", op1.regBits);
 
             if (this.opcodes[op].operands[1] === "I") {
                 out = out + op2.getBytes(opcode.size);
             } else {
-                out = out.replace("rrr", op2.RegBits);
+                out = out.replace("rrr", op2.regBits);
             }
 
             return out;
@@ -102,7 +159,20 @@ var Instructions = [
     {"instruction": "IDIV", "name": "Signed divide"},
     {"instruction": "IMUL", "name": "Signed multiply"},
     {"instruction": "IN", "name": "Input from port"},
-    {"instruction": "INC", "name": "Increment by 1"},
+    {
+        "instruction": "INC",
+        "name": "Increment by 1",
+        "operandCount": 1,
+        "opcodes": [
+            {"code": "1111111011000rrr", "operands": ["G"], "size": 8}, // AL, AH, BL, BH, etc
+            {"code": "01000rrr", "operands": ["G"], "size": 16}, // AX, BX, CX, DX only
+        ],
+        "getCode": function (op, op1) {
+            const opcode = this.opcodes[op];
+            let out = opcode.code.replace("rrr", op1.regBits);
+            return out;
+        }
+    },
     {"instruction": "INT", "name": "Call to interrupt"},
     {"instruction": "INTO", "name": "Call to interrupt if overflow"},
     {"instruction": "IRET", "name": "Return from interrupt"},
@@ -172,13 +242,13 @@ var Instructions = [
             //{"code": "10000011", "operands": ["E", "I"], "size": 16}
         ],
         "getCode": function (op, op1, op2) {
-            var opcode = this.opcodes[op];
-            var out = opcode.code.replace("rrr", op1.RegBits);
+            const opcode = this.opcodes[op];
+            let out = opcode.code.replace("rrr", op1.regBits);
 
             if (this.opcodes[op].operands[1] === "I") {
                 out = out + op2.getBytes(opcode.size);
             } else {
-                out = out.replace("rrr", op2.RegBits);
+                out = out.replace("rrr", op2.regBits);
             }
 
             return out;
@@ -239,96 +309,105 @@ var Instructions = [
     {"instruction": "WAIT", "name": "Wait until not busy"},
     {"instruction": "XCHG", "name": "Exchange data"},
     {"instruction": "XLAT", "name": "Table look-up translation"},
-    {"instruction": "XOR", "name": "Exclusive OR"}
+    {
+        "instruction": "XOR",
+        "name": "Exclusive OR",
+        "operandCount": 2,
+        "opcodes": [
+            {code: "34"}
+        ]
+    }
 ];
 
-var WHITESPACE = [" ", "\t"];
+const WHITESPACE = [" ", "\t"];
 
-function Scanner(code) {
-    this.code = code + "";
-    this.pos = 0;
+class Scanner {
+    constructor (code) {
+        this.code = code + "";
+        this.pos = 0;
+    }
+
+    isEof () {
+        return this.code.length <= this.pos;
+    };
+
+    getCurrentChar () {
+        return this.code.charAt(this.pos);
+    }
+
+    skipChar () {
+        this.pos++;
+    }
+
+    skipChars (skipChars) {
+        const data = this.code;
+        let i = this.pos;
+
+        for (; i < data.length; i++) {
+            const value = data.charAt(i);
+
+            if (-1 === skipChars.indexOf(value)) {
+                break;
+            }
+        }
+
+        this.pos = i;
+    }
+
+    getChars (endChars) {
+        const data = this.code;
+        let i = this.pos;
+
+        for (; i < data.length; i++) {
+            const value = data.charAt(i);
+
+            if (-1 !== endChars.indexOf(value)) {
+                break;
+            }
+        }
+
+        const returnVal = data.substring(this.pos, i);
+        this.pos = i;
+
+        return returnVal;
+    }
+
+    lookChars (endChars) {
+        const data = this.code;
+        let i = this.pos;
+
+        for (; i < data.length; i++) {
+            const value = data.charAt(i);
+
+            if (-1 !== endChars.indexOf(value)) {
+                break;
+            }
+        }
+
+        return data.substring(this.pos, i);
+    }
+
+    skipWhitespace () {
+        this.skipChars(WHITESPACE);
+    }
 }
 
-Scanner.prototype.isEof = function() {
-    return this.code.length <= this.pos;
-};
-
-Scanner.prototype.getCurrentChar = function() {
-    return this.code.charAt(this.pos);
-};
-
-Scanner.prototype.skipChar = function() {
-    this.pos++;
-};
-
-Scanner.prototype.skipChars = function(skipChars) {
-    var data = this.code;
-    var i = this.pos;
-
-    for (; i < data.length; i++) {
-        var value = data.charAt(i);
-
-        if (-1 === skipChars.indexOf(value)) {
-            break;
-        }
-    }
-
-    this.pos = i;
-};
-
-Scanner.prototype.getChars = function(endChars) {
-    var data = this.code;
-    var i = this.pos;
-
-    for (; i < data.length; i++) {
-        var value = data.charAt(i);
-
-        if (-1 !== endChars.indexOf(value)) {
-            break;
-        }
-    }
-
-    var returnVal = data.substring(this.pos, i);
-    this.pos = i;
-
-    return returnVal;
-};
-
-Scanner.prototype.lookChars = function(endChars) {
-    var data = this.code;
-    var i = this.pos;
-
-    for (; i < data.length; i++) {
-        var value = data.charAt(i);
-
-        if (-1 !== endChars.indexOf(value)) {
-            break;
-        }
-    }
-
-    return data.substring(this.pos, i);
-};
-
-Scanner.prototype.skipWhitespace = function() {
-    this.skipChars(WHITESPACE);
-};
-
 function copyData(from, to) {
-    for (var attr in from) {
+    for (let attr in from) {
         if (from.hasOwnProperty(attr))
             to[attr] = from[attr];
     }
 }
 
 function Label(str) {
-    var label = str;
+    const label = str;
     this.toString = function() {
         return "Label (" + label.fontcolor("grey") + ") ";
     };
 }
 
 function Prefix(str) {
-    var prefix = str;
+    const prefix = str;
     this.toString = function() {
         return "Prefix (" + prefix.fontcolor("aqua") + ")";
     };
@@ -342,59 +421,6 @@ function Instruction(instruction) {
     };
 }
 
-function Operand() {
-
-}
-
-function Register(register) {
-    copyData(register, this);
-
-    this.toString = function() {
-        return "Register (" + this.register.fontcolor("green") + ")";
-    };
-}
-
-Register.prototype = new Operand();
-
-function Immediate(str) {
-    var value;
-    var number = str;
-    var type = "";
-    var lastChar = number[number.length - 1];
-    if (lastChar === "b") {
-        type = "Binary";
-        value = parseInt(number.substr(0, number.length - 1), 2);
-    } else if (lastChar === "o") {
-        type = "Octal";
-        value = parseInt(number.substr(0, number.length - 1), 8);
-    } else if (lastChar === "h") {
-        type = "Hexadecimal";
-        value = parseInt(number.substr(0, number.length - 1), 16);
-    } else {
-        type = "Decimal";
-        value = parseInt(number, 10);
-    }
-
-    this.types = ["I"];
-
-    this.getBytes = function (bits) {
-        var strVal = value.toString(2);
-        if (strVal.length > bits) {
-            console.log("Immediate too large: " + strVal + " (" + strVal.length + " bits wanted " + bits + " bits");
-        }
-        while (strVal.length < bits) {
-            strVal = "0" + strVal;
-        }
-        return strVal;
-    };
-
-    this.toString = function () {
-        return type + " Number (" + number.fontcolor("red") + ")";
-    };
-}
-
-Immediate.prototype = new Operand();
-
 function Comma() {
     this.toString = function() {
         return ",";
@@ -407,72 +433,74 @@ function Newline() {
     };
 }
 
-function Tokeniser(code) {
-    this.tokens = [];
-    this.token = 0;
-    this.scanner = new Scanner(code);
-}
-
-Tokeniser.prototype.nextToken = function() {
-    var val, tok, j;
-
-    while (!this.scanner.isEof()) {
-        this.scanner.skipWhitespace();
-        if (!this.scanner.isEof()) {
-            val = this.scanner.getCurrentChar();
-
-            if (/^[a-z]$/i.test(val)) {
-                tok = this.scanner.getChars([" ", ";", "\n", "\t", ","]);
-                if (tok.indexOf(":", tok.length - 1) !== -1) {
-                    return new Label(tok.substring(0, tok.length - 1));
-                } else {
-                    for (j = 0; j < Prefixs.length; j++) {
-                        if (Prefixs[j].prefix === tok) {
-                            return new Prefix(tok);
-                        }
-                    }
-                    for (j = 0; j < Instructions.length; j++) {
-                        if (Instructions[j].instruction === tok) {
-                            return new Instruction(Instructions[j]);
-                        }
-                    }
-                    for (j = 0; j < Registers.length; j++) {
-                        if (Registers[j].register === tok) {
-                            return new Register(Registers[j]);
-                        }
-                    }
-
-                    return tok;
-                }
-            } else if (/^[0-9]$/i.test(val)) {
-                return new Immediate(this.scanner.getChars([" ", ";", "\n", "\t", ","]));
-            } else if (/^[;]$/i.test(val)) {
-                this.scanner.skipChars(["\n"]);
-                //this.tokens.push(new Comment());
-            } else if (/^[,]$/i.test(val)) {
-                this.scanner.skipChar();
-                return new Comma();
-            } else if (/^[\n]$/i.test(val)) {
-                this.scanner.skipChar();
-                return new Newline();
-            } else {
-                this.scanner.skipChar();
-                console.log("Unknown char: '" + val + "' char value: " + val.charCodeAt(0));
-            }
-        }
+class Tokeniser {
+    constructor (code) {
+        this.tokens = [];
+        this.token = 0;
+        this.scanner = new Scanner(code);
     }
 
-    return "";
-};
+    nextToken () {
+        var val, tok, j;
 
-Tokeniser.prototype.hasMoreTokens = function() {
-    return !this.scanner.isEof();
-};
+        while (!this.scanner.isEof()) {
+            this.scanner.skipWhitespace();
+            if (!this.scanner.isEof()) {
+                val = this.scanner.getCurrentChar();
+
+                if (/^[a-z]$/i.test(val)) {
+                    tok = this.scanner.getChars([" ", ";", "\n", "\t", ","]);
+                    if (tok.indexOf(":", tok.length - 1) !== -1) {
+                        return new Label(tok.substring(0, tok.length - 1));
+                    } else {
+                        for (j = 0; j < Prefixs.length; j++) {
+                            if (Prefixs[j].prefix === tok) {
+                                return new Prefix(tok);
+                            }
+                        }
+                        for (j = 0; j < Instructions.length; j++) {
+                            if (Instructions[j].instruction === tok) {
+                                return new Instruction(Instructions[j]);
+                            }
+                        }
+                        for (j = 0; j < Registers.length; j++) {
+                            if (Registers[j].register === tok) {
+                                return Registers[j];
+                            }
+                        }
+
+                        return tok;
+                    }
+                } else if (/^[0-9]$/i.test(val)) {
+                    return new Immediate(this.scanner.getChars([" ", ";", "\n", "\t", ","]));
+                } else if (/^[;]$/i.test(val)) {
+                    this.scanner.skipChars(["\n"]);
+                    //this.tokens.push(new Comment());
+                } else if (/^[,]$/i.test(val)) {
+                    this.scanner.skipChar();
+                    return new Comma();
+                } else if (/^[\n]$/i.test(val)) {
+                    this.scanner.skipChar();
+                    return new Newline();
+                } else {
+                    this.scanner.skipChar();
+                    console.log("Unknown char: '" + val + "' char value: " + val.charCodeAt(0));
+                }
+            }
+        }
+
+        return "";
+    }
+
+    hasMoreTokens () {
+        return !this.scanner.isEof();
+    }
+}
 
 function Parse(text) {
-    var tokeniser = new Tokeniser(text);
-    var tokens = [];
-    var codeOut = "";
+    const tokeniser = new Tokeniser(text);
+    const tokens = [];
+    let codeOut = "";
 
     while (tokeniser.hasMoreTokens()) {
         var token = tokeniser.nextToken();
