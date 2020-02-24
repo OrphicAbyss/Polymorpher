@@ -606,7 +606,6 @@ class Tokeniser {
                     this.scanner.skipChar();
                     const tok = new StringToken(this.scanner.getChars("\""));
                     this.scanner.skipChar();
-                    console.log(tok.toString());
                     return tok;
                 } else if (/^[\n]$/i.test(val)) {
                     this.scanner.skipChar();
