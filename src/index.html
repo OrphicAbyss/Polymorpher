@@ -2,7 +2,7 @@
 <html data-ng-app>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Polymorpher - Online Coding</title>
+        <title>Polymorpher - Online Assembler</title>
 
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,8 +23,8 @@
         <div class="container">
             <div class="navbar">
                 <div class="navbar-inner">
-                    <a class="brand">Polymorpher</a>
-                    <p class="navbar-text">An online coding platform</p>
+                    <a class="brand">WebAssembler?</a>
+                    <p class="navbar-text">An online assembler</p>
                 </div>
             </div>
         </div>
@@ -33,11 +33,17 @@
                 <p><b>Code</b><br/>
                     <textarea class="code" data-ng-model="code" rows="10"></textarea>
                 </p>
-                <p><b>Assemble</b><br/>
+                <p><b>Tokens</b><br/>
                     <span class="output" data-ng-bind-html="codeView()"></span>
                 </p>
-                <p><b>Machine</b><br/>
+                <p><b>Parsed</b><br/>
                     <span class="output" data-ng-bind-html="machineView()"></span>
+                </p>
+                <p><b>Binary</b><br/>
+                    <span class="output" data-ng-bind-html="binaryView()"></span>
+                </p>
+                <p><b>Machine</b><br/>
+                    <a id="download" class="btn">Download</a>
                 </p>
             </div>
         </div>
