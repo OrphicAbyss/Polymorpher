@@ -44,7 +44,7 @@ class Immediate extends Operand {
         }
         // chunk into 8 bit lots and reverse for little endian
         let output = "";
-        for (let i=0; i<strVal.length; i+=8) {
+        for (let i = 0; i < strVal.length; i += 8) {
             output = strVal.substr(i, 8) + output;
         }
 
@@ -172,7 +172,7 @@ const Instructions = [
             // {"code": "00000011mmrrrrrr", "operands": ["G", "M"], "size": 16},//2 -> 1
             {"code": "1000000011000rrr", "operands": ["G", "I"], "size": 8}, //I -> R
             // {"code": "10000000mm100rrr", "operands": ["M", "I"], "size": 8}, //I -> M
-            {"code": "1000000111000rrr", "operands": ["G", "I"], "size": 16},//I -> R
+            {"code": "1000000111000rrr", "operands": ["G", "I"], "size": 16}//I -> R
             // {"code": "10000001mm100rrr", "operands": ["M", "I"], "size": 16}//I -> M
             //sign extend version
             //{"code": "10000010", "operands": ["E", "I"], "size": 8},
@@ -219,12 +219,12 @@ const Instructions = [
             let out = opcode.code.replace("rrr", op1.regBits);
             return out;
         }),
-    new Instruction("INT", "Call to interrupt", 1,[
+    new Instruction("INT", "Call to interrupt", 1, [
             {"code": "CD", "operands": ["I"], "size": 8}
         ],
         function (op, op1) {
             const opcode = this.opcodes[op];
-            let out = parseInt(opcode.code,16).toString(2);
+            let out = parseInt(opcode.code, 16).toString(2);
             out = out + op1.getBytes(opcode.size);
             return out;
         }),
@@ -353,7 +353,7 @@ const Instructions = [
     new Instruction("XOR", "Exclusive OR", 2, [
         {code: "1000000011110rrr", "operands": ["G", "I"], "size": 8},
         {code: "1000001111110rrr", "operands": ["G", "I"], "size": 16},
-        {code: "1000001111rrrrrr", "operands": ["G", "G"], "size": 16},
+        {code: "1000001111rrrrrr", "operands": ["G", "G"], "size": 16}
     ], function (op, op1, op2) {
         const opcode = this.opcodes[op];
         let out = opcode.code.replace("rrr", op1.regBits);
@@ -392,7 +392,7 @@ class DefineDataDirective extends Directive {
         }
 
         let output = "";
-        for (let i=0; i<this.bitSize; i++) {
+        for (let i = 0; i < this.bitSize; i++) {
             output += "0";
         }
         return output;
@@ -407,7 +407,7 @@ class ReserveDataDirective extends Directive {
 
     toCode () {
         let output = "";
-        for (let i=0; i<this.bitSize; i++) {
+        for (let i = 0; i < this.bitSize; i++) {
             output += "0";
         }
         return output;
@@ -429,7 +429,7 @@ const Directives = [
     new ReserveDataDirective("DP", "Define Pointer", 48),
     new ReserveDataDirective("DF", "Define Far Pointer", 48),
     new ReserveDataDirective("DQ", "Define Quad Word", 64),
-    new ReserveDataDirective("DT", "Define FPU Double", 80),
+    new ReserveDataDirective("DT", "Define FPU Double", 80)
 ];
 
 const WHITESPACE = [" ", "\t"];
@@ -585,7 +585,7 @@ class Tokeniser {
                                 return Registers[j];
                             }
                         }
-                        for (j =0; j < Directives.length; j++) {
+                        for (j = 0; j < Directives.length; j++) {
                             if (Directives[j].directive === upperTok) {
                                 return Directives[j];
                             }
@@ -763,7 +763,11 @@ function assemble (tokens) {
                             if (validOp === true) {
                                 if (instruction.getCode) {
                                     if (operands.filter(item => item instanceof PlaceholderImmediate).length > 0) {
-                                        placeholders.push({instruction, params: [l].concat(operands), position: binaryOutput.length});
+                                        placeholders.push({
+                                            instruction,
+                                            params: [l].concat(operands),
+                                            position: binaryOutput.length
+                                        });
                                     }
                                     binaryOutput.push(instruction.getCode(l, ...operands));
                                 } else {
@@ -828,7 +832,7 @@ function assemble (tokens) {
     // add spaces to binary
     let formattedBinary = "";
     const binary = binaryOutput.join("");
-    for (let i=0; i<binary.length; i++) {
+    for (let i = 0; i < binary.length; i++) {
         if (i % (8 * 6) === 0 && i !== 0) {
             formattedBinary += "<br/>";
         } else if (i % 8 === 0 && i !== 0) {
@@ -840,59 +844,61 @@ function assemble (tokens) {
     return {output, binaryOutput: formattedBinary};
 }
 
-function Ctrl ($scope, $log, $sce) {
-    $scope.update = function () {
-        var parse = new Parse($scope.code);
-        $scope.asm = parse.asm;
-        $scope.tokens = parse.tokens;
-        $scope.machine = assemble($scope.tokens.slice());
+angular.module("assemblerApp", [])
+    .controller("Ctrl", function ($scope, $log, $sce) {
+            $scope.update = function () {
+                var parse = new Parse($scope.code);
+                $scope.asm = parse.asm;
+                $scope.tokens = parse.tokens;
+                $scope.machine = assemble($scope.tokens.slice());
 
-        if ($scope.machine && $scope.machine.binaryOutput) {
-            const binary = $scope.machine.binaryOutput.split("<br/>").join(" ").split(" ");
-            const buffer = binary.map((binary) => parseInt(binary, 2));
-            const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
-            const url = URL.createObjectURL(blob);
-            // const downloadSpan = document.getElementById("download-span");
-            // const button = document.createElement("a");
-            // button.setAttribute("href", url);
-            // button.text = "download";
-            // downloadSpan.appendChild(button);
-            const downloadButton = document.getElementById("download");
-            downloadButton.setAttribute("href", url);
-            downloadButton.setAttribute("download", "code.com");
-            // downloadButton.click();
-        } else {
-            // const downloadButton = document.getElementById("download");
-            // downloadButton.setAttribute("href", "");
-            // downloadButton.setAttribute("download", "");
+                if ($scope.machine && $scope.machine.binaryOutput) {
+                    const binary = $scope.machine.binaryOutput.split("<br/>").join(" ").split(" ");
+                    const buffer = binary.map((binary) => parseInt(binary, 2));
+                    const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
+                    const url = URL.createObjectURL(blob);
+                    // const downloadSpan = document.getElementById("download-span");
+                    // const button = document.createElement("a");
+                    // button.setAttribute("href", url);
+                    // button.text = "download";
+                    // downloadSpan.appendChild(button);
+                    const downloadButton = document.getElementById("download");
+                    downloadButton.setAttribute("href", url);
+                    downloadButton.setAttribute("download", "code.com");
+                    // downloadButton.click();
+                } else {
+                    // const downloadButton = document.getElementById("download");
+                    // downloadButton.setAttribute("href", "");
+                    // downloadButton.setAttribute("download", "");
+                }
+            };
+
+            $scope.codeView = function () {
+                return $sce.trustAsHtml($scope.asm);
+            };
+
+            $scope.machineView = function () {
+                return $sce.trustAsHtml($scope.machine.output);
+            };
+
+            $scope.binaryView = function () {
+                return $sce.trustAsHtml($scope.machine.binaryOutput);
+            };
+
+            $scope.code = "\torg\t100h       \n" +
+                "\n" +
+                "\tmov\tah,09\n" +
+                "\tmov\tdx,msg\n" +
+                "\tint\t21h\n" +
+                "\tmov\tah,08\n" +
+                "\tint\t21h\n" +
+                "\tint\t20h\n" +
+                "\tmsg\tdb \"hello world!$\"";
+            $scope.update();
+
+            $scope.$watch("code", function () {
+                $scope.update();
+            });
         }
-    };
-
-    $scope.codeView = function () {
-        return $sce.trustAsHtml($scope.asm);
-    };
-
-    $scope.machineView = function () {
-        return $sce.trustAsHtml($scope.machine.output);
-    };
-
-    $scope.binaryView = function () {
-        return $sce.trustAsHtml($scope.machine.binaryOutput);
-    };
-
-    $scope.code = "\torg\t100h       \n" +
-        "\n" +
-        "\tmov\tah,09\n" +
-        "\tmov\tdx,msg\n" +
-        "\tint\t21h\n" +
-        "\tmov\tah,08\n" +
-        "\tint\t21h\n" +
-        "\tint\t20h\n" +
-        "\tmsg\tdb \"hello world!$\"";
-    $scope.update();
-
-    $scope.$watch("code", function () {
-        $scope.update();
-    });
-}
+    );
 
