@@ -596,7 +596,7 @@ class Tokeniser {
                 } else if (/^[0-9]$/i.test(val)) {
                     return new Immediate(this.scanner.getChars([" ", ";", "\n", "\t", ","]));
                 } else if (/^[;]$/i.test(val)) {
-                    this.scanner.skipChars(["\n"]);
+                    this.scanner.getChars(["\n"]);
                     //this.tokens.push(new Comment());
                 } else if (/^[,]$/i.test(val)) {
                     this.scanner.skipChar();
@@ -843,6 +843,19 @@ function assemble (tokens) {
     return {output, binaryOutput: formattedBinary};
 }
 
+const exampleDosProgram = `; Example DOS program which compiles as a .com file
+; Prints 'Hello, world!', waits for a key press, then exits 
+    org    100h       
+
+    mov ah,09
+    mov dx,msg
+    int 21h
+    mov ah,08
+    int 21h
+    int 20h
+    msg db "hello world!$"
+`;
+
 angular.module("assemblerApp", [])
     .controller("Ctrl", function ($scope, $log, $sce) {
             $scope.update = function () {
@@ -884,15 +897,7 @@ angular.module("assemblerApp", [])
                 return $sce.trustAsHtml($scope.machine.binaryOutput);
             };
 
-            $scope.code = "\torg\t100h       \n" +
-                "\n" +
-                "\tmov\tah,09\n" +
-                "\tmov\tdx,msg\n" +
-                "\tint\t21h\n" +
-                "\tmov\tah,08\n" +
-                "\tint\t21h\n" +
-                "\tint\t20h\n" +
-                "\tmsg\tdb \"hello world!$\"";
+            $scope.code = exampleDosProgram;
             $scope.update();
 
             $scope.$watch("code", function () {
