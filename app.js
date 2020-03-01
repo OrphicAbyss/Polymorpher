@@ -16,7 +16,7 @@ function onRequest(request, response) {
         pathname = "/index.html";
     }
 
-    pathname = "./src/" + pathname;
+    pathname = "./dist/" + pathname;
     const ext = path.extname(pathname);
 
     switch (ext) {

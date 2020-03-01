@@ -1,6 +1,22 @@
 "use strict";
 
-const Registers = [
+export class Register {
+    constructor (register, bits, types, regBits, name, type) {
+        this.key = register;
+        this.bits = bits;
+        this.types = types;
+        this.regBits = regBits;
+        this.name = name;
+        this.regType = type;
+        this.type = "REGISTER";
+    }
+
+    toString () {
+        return `Register (${this.key})`;
+    };
+}
+
+export const registers = [
     new Register("AL", 8, ["G", "E"], "000", "AL", "General Register"),
     new Register("BL", 8, ["G", "E"], "011", "BL", "General Register"),
     new Register("CL", 8, ["G", "E"], "001", "CL", "General Register"),
@@ -22,3 +38,4 @@ const Registers = [
     new Register("ES", 16, ["S"], "00", "Extra Segment", "Segment register"),
     new Register("SS", 16, ["S"], "10", "Stack Segment", "Segment register")
 ];
+

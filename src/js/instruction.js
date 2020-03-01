@@ -1,16 +1,21 @@
 "use strict";
 
-//TODO: Add what instructions they are valid for
-const Prefixs = [
-    new Prefix("LOCK", "Lock (Preform as atomic)"),
-    new Prefix("REP", "Repeat for Count"),
-    new Prefix("REPE", "Repeat for Count or Equal"),
-    new Prefix("REPZ", "Repeat for Count or Zero"),
-    new Prefix("REPNE", "Repeat for Count or Not Equal"),
-    new Prefix("REPNZ", "Repeat for Count or Not Zero")
-];
+export class Instruction {
+    constructor (instruction, name, operandCount, opcodes, getCode) {
+        this.key = instruction;
+        this.name = name;
+        this.operandCount = operandCount;
+        this.opcodes = opcodes;
+        this.toCode = getCode;
+        this.type = "INSTRUCTION";
+    }
 
-const Instructions = [
+    toString () {
+        return `Instruction (${this.key})`;
+    }
+}
+
+export const instructions = [
     new Instruction("AAA", "ASCII adjust AL after addition"),
     new Instruction("AAD", "ASCII adjust AX before division"),
     new Instruction("AAM", "ASCII adjust AX after multiplication"),

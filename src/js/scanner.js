@@ -1,11 +1,12 @@
 "use strict";
 
+import {COMMA, COMMENT, IDENTIFIER, NEW_LINE, NUMERIC, STRING, UNKNOWN, Token} from "./tokens";
 const WHITESPACE = [" ", "\t"];
 
 /**
  * Takes the code string and deals with pulling out characters in groups required by the tokeniser.
  */
-class Scanner {
+export class Scanner {
     constructor (code) {
         this.code = code + "";
         this.pos = 0;
@@ -21,6 +22,7 @@ class Scanner {
 
     skipChar () {
         this.pos++;
+        return this.code.charAt(this.pos - 1);
     }
 
     skipChars (skipChars) {
@@ -74,4 +76,43 @@ class Scanner {
     skipWhitespace () {
         this.skipChars(WHITESPACE);
     }
+}
+
+export function scanCode (text) {
+    const scanner = new Scanner(text);
+    const lexemes = [];
+
+    while (!scanner.isEof()) {
+        // skip any whitespace
+        scanner.skipWhitespace();
+
+        let lexeme = null;
+        const char = scanner.getCurrentChar();
+        if (/^[;]$/i.test(char)) {
+            // We matched a comment token
+            lexeme = new Token(COMMENT, scanner.getChars(["\n"]));
+        } else if (/^[a-z]$/i.test(char)) {
+            // we matched a text token
+            lexeme = new Token(IDENTIFIER, scanner.getChars([" ", ";", "\n", "\t", ","]));
+        } else if (/^[0-9]$/i.test(char)) {
+            // we matched a number token
+            lexeme = new Token(NUMERIC, scanner.getChars([" ", ";", "\n", "\t", ","]));
+        } else if (/^[,]$/i.test(char)) {
+            // we matched a comma
+            lexeme = new Token(COMMA, scanner.skipChar());
+        } else if (/^[\"]$/i.test(char)) {
+            // we matched a string literal
+            scanner.skipChar();
+            lexeme = new Token(STRING, `${scanner.getChars("\"")}`);
+            scanner.skipChar();
+        } else if (/^[\n]$/i.test(char)) {
+            // we matched a new line
+            lexeme = new Token(NEW_LINE, scanner.skipChar());
+        } else {
+            // we aren't sure what it is
+            lexeme = new Token(UNKNOWN, scanner.skipChar());
+        }
+        lexemes.push(lexeme);
+    }
+    return lexemes;
 }
