@@ -1,11 +1,13 @@
 "use strict";
 
-import {StrToken} from "./tokeniser";
+import {Label, StrToken} from "./tokeniser";
+import {Immediate} from "./immediate";
 
 export class Directive {
-    constructor (directive, name, paramCount) {
+    constructor (directive, description, acceptParams) {
         this.key = directive;
-        this.paramCount = paramCount;
+        this.description = description;
+        this.acceptParams = acceptParams;
         this.type = "DIRECTIVE";
     }
 
@@ -14,29 +16,54 @@ export class Directive {
     }
 }
 
-// TODO: Separate these into different types based on required handling of next token
-export class DefineDataDirective extends Directive {
-    constructor (directive, name, bitSize) {
-        super(directive, name, 1);
-        this.bits = bitSize;
+export class FormatDirective extends Directive {
+    constructor (directive, description) {
+        super(directive, description, true);
     }
 
     toCode (value) {
-        if (value instanceof StrToken) {
-            return value.toCode();
-        }
+        console.log("Format code generation handled by format class.");
+    }
+}
 
+export class SegmentDirective extends Directive {
+    constructor (directive, description) {
+        super(directive, description, true);
+    }
+
+    toCode (value) {
+        // needs to pad the segment to a 16 byte paragraph
+        const padding = 16 - value % 16;
         let output = "";
-        for (let i = 0; i < this.bitSize; i++) {
-            output += "0";
+        for (let i = 0; i < padding; i++) {
+            output += "00000000";
         }
         return output;
     }
 }
 
+// TODO: Separate these into different types based on required handling of next token
+export class DefineDataDirective extends Directive {
+    constructor (directive, description, bitSize) {
+        super(directive, description, true);
+        this.bits = bitSize;
+    }
+
+    toCode (...values) {
+        return values.map((token) => {
+            if (token instanceof StrToken) {
+                return token.toCode();
+            }
+            if (token instanceof Immediate) {
+                return token.getBytes(token.bits);
+            }
+        }).join("");
+    }
+}
+
 export class ReserveDataDirective extends Directive {
-    constructor (directive, name, bitSize) {
-        super(directive, name, 0);
+    constructor (directive, description, bitSize) {
+        super(directive, description, false);
         this.bits = bitSize;
     }
 
@@ -50,7 +77,12 @@ export class ReserveDataDirective extends Directive {
 }
 
 export const directives = [
-    new Directive("ORG", "Orgin of code", 1),
+    new Directive("ORG", "Orgin of code", true),
+    new FormatDirective("FORMAT", "Executable Format", true),
+    new Directive("ENTRY", "Program Entry Point", true),
+    new Directive("STACK", "Size of Stack", true),
+    new Directive("HEAP", "Size of Heap", true),
+    new SegmentDirective("SEGMENT", "Segment Start and Label"),
     new DefineDataDirective("DB", "Define Byte", 8),
     new DefineDataDirective("DW", "Define Word", 16),
     new DefineDataDirective("DD", "Define Double Word", 32),

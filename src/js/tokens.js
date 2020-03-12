@@ -6,7 +6,8 @@ export const IDENTIFIER = 1;
 export const NUMERIC = 2;
 export const STRING = 3;
 export const COMMA = 4;
-export const NEW_LINE = 5;
+export const COLON = 5;
+export const NEW_LINE = 6;
 
 export class Token {
     constructor (type, token) {

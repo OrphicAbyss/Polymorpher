@@ -6,7 +6,7 @@ import {directives} from "./directive";
 import {registers} from "./register";
 import {Immediate} from "./immediate";
 
-import {UNKNOWN, COMMENT, IDENTIFIER, NUMERIC, COMMA, STRING, NEW_LINE, Token} from "./tokens";
+import {UNKNOWN, COMMENT, IDENTIFIER, NUMERIC, COLON, COMMA, STRING, NEW_LINE, Token} from "./tokens";
 
 export class Label {
     constructor (label) {
@@ -16,6 +16,17 @@ export class Label {
 
     toString () {
         return `Label (${this.label})`;
+    }
+}
+
+export class Colon {
+    constructor () {
+        this.label = ":";
+        this.type = "COLON";
+    }
+
+    toString () {
+        return "Colon (:)";
     }
 }
 
@@ -93,6 +104,10 @@ export function tokenise (lexemes) {
                 break;
             case NUMERIC:
                 tokens.push(new Immediate(token.token));
+                current++;
+                break;
+            case COLON:
+                tokens.push(new Colon());
                 current++;
                 break;
             case COMMA:

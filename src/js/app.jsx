@@ -7,7 +7,9 @@ import {scanCode} from "./scanner";
 import {tokenise} from "./tokeniser";
 import {parse} from "./parser";
 import {assemble} from "./assemble";
-
+import AceEditor from "react-ace";
+import "ace-builds/src-noconflict/ext-beautify";
+import "ace-builds/src-noconflict/mode-assembly_x86";
 
 const colourCodes = {};
 
@@ -19,7 +21,6 @@ export function getColor (type) {
     }
     return schemeCategory10[code];
 }
-
 
 const exampleDosProgram = `; Example DOS program which compiles as a .com file
 ; Prints 'Hello, world!', waits for a key press, then exits 
@@ -34,10 +35,50 @@ const exampleDosProgram = `; Example DOS program which compiles as a .com file
     msg db "hello world!$"
 `;
 
+const exampleDosMZProgram = `format MZ
+
+entry main:start            ; program entry point
+stack 100h                ; stack size
+
+segment main                ; main program segment
+start:
+mov    ax,text
+mov    ds,ax
+mov    dx,hello
+call    extra:write_text
+mov    ax,4C00h
+int    21h
+segment text
+hello db 'Hello world!',24h
+segment extra
+write_text:
+mov    ah,9
+int    21h
+retf`;
+
+const exampleDosMZ2Program = `format MZ                       ;Исполняемый файл DOS EXE (MZ EXE)
+entry code_seg:start            ;Точка входа в программу
+stack 200h                      ;Размер стека
+;--------------------------------------------------------------------
+    segment data_seg                ;Cегмент данных
+hello db 'Hello, asmworld!$'    ;Строка
+;--------------------------------------------------------------------
+    segment code_seg                ;Сегмент кода
+start:                          ;Точка входа в программу
+mov ax,data_seg             ;Инициализация регистра DS
+mov ds,ax
+mov ah,09h
+mov dx,hello                ;Вывод строки
+int 21h
+mov ax,4C00h
+int 21h                     ;Завершение программы
+`;
 
 export default function App () {
-    const [code, setCode] = React.useState(exampleDosProgram);
-    const codeUpdate = (event) => setCode(event.target.value);
+    const [code, setCode] = React.useState(exampleDosMZProgram);
+    const codeUpdate = (text) => {
+        setCode(text);
+    };
 
     const timeStart = new Date();
 
@@ -81,7 +122,7 @@ export default function App () {
                 <Tabs>
                     <Tab title="Code">
                         <Box pad="medium">
-                            <textarea className="code" rows="20" value={code} onChange={codeUpdate}></textarea>
+                            <AceEditor theme="tomorrow" mode="assembly_x86" value={code} onChange={codeUpdate} name="ace" width="100%" fontSize={16}/>
                         </Box>
                     </Tab>
                     <Tab title="Lexemes">
@@ -103,6 +144,7 @@ export default function App () {
                         <Box pad="medium">
                             {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
                             {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
+                            {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))};
                             <Button href={url} label="Download Machine Code" download="code.com"/>
                         </Box>
                     </Tab>

@@ -1,10 +1,9 @@
 "use strict";
 
 export class Instruction {
-    constructor (instruction, name, operandCount, opcodes, getCode) {
+    constructor (instruction, name, opcodes, getCode) {
         this.key = instruction;
         this.name = name;
-        this.operandCount = operandCount;
         this.opcodes = opcodes;
         this.toCode = getCode;
         this.type = "INSTRUCTION";
@@ -15,18 +14,45 @@ export class Instruction {
     }
 }
 
+function replaceGeneralOrSegmentRegOnly (op, r) {
+    const opcode = this.opcodes[op];
+    if (opcode.operands[0] === "G") {
+        return opcode.code.replace("rrr", r.regBits);
+    } else if (opcode.operands[0] === "S") {
+        return opcode.code.replace("rr", r.regBits);
+    }
+    console.log("Unknown Instruction");
+}
+
+function convertHexToBinNoParams (op) {
+    const opcode = this.opcodes[op];
+    return parseInt(opcode.code, 16).toString(2);
+}
+
+function convertHexToBinOptionalImm (op, op1, op2) {
+    const opcode = this.opcodes[op];
+    let out = parseInt(opcode.code, 16).toString(2);
+    if (op1 && opcode.operands.length > 0) {
+        out = out + op1.getBytes(opcode.size);
+    }
+    if (op1 && opcode.operands.length > 1) {
+        out = out + op2.getBytes(opcode.size);
+    }
+    return out;
+}
+
 export const instructions = [
     new Instruction("AAA", "ASCII adjust AL after addition"),
     new Instruction("AAD", "ASCII adjust AX before division"),
     new Instruction("AAM", "ASCII adjust AX after multiplication"),
     new Instruction("AAS", "ASCII adjust AL after subtraction"),
-    new Instruction("ADC", "Add with carry", 2, [
-        {"code": "10", "operands": ["G", "E"], "size": 8},
-        {"code": "11", "operands": ["G", "E"], "size": 16},
-        {"code": "12", "operands": ["E", "G"], "size": 8},
-        {"code": "13", "operands": ["E", "G"], "size": 16}
+    new Instruction("ADC", "Add with carry", [
+        {code: "10", operands: ["G", "E"], size: 8},
+        {code: "11", operands: ["G", "E"], size: 16},
+        {code: "12", operands: ["E", "G"], size: 8},
+        {code: "13", operands: ["E", "G"], size: 16}
     ]),
-    new Instruction("ADD", "Add", 2, [
+    new Instruction("ADD", "Add", [
             {"code": "0000000011rrrrrr", "operands": ["G", "G"], "size": 8}, //1 -> 2
             {"code": "0000000111rrrrrr", "operands": ["G", "G"], "size": 16},//1 -> 2
             // {"code": "00000000mmrrrrrr", "operands": ["G", "M"], "size": 8}, //1 -> 2
@@ -56,7 +82,16 @@ export const instructions = [
             return out;
         }),
     new Instruction("AND", "Logical AND"),
-    new Instruction("CALL", "Call procedure"),
+    new Instruction("CALL", "Call procedure", [
+        {code: "E8", operands: ["I"], size: 16},
+        {code: "9A", operands: ["I", "I"], size: 16},
+    ], function (op, op1, op2) {
+        if (this.opcodes[op].operands.length === 2) {
+            // reverse operands for far call,
+            return convertHexToBinOptionalImm.bind(this)(op, op2, op1);
+        }
+        return convertHexToBinOptionalImm.bind(this)(op, op1, op2);
+    }),
     new Instruction("CBW", "Convert byte to word"),
     new Instruction("CLC", "Clear carry flag"),
     new Instruction("CLD", "Clear direction flag"),
@@ -75,24 +110,13 @@ export const instructions = [
     new Instruction("IDIV", "Signed divide"),
     new Instruction("IMUL", "Signed multiply"),
     new Instruction("IN", "Input from port"),
-    new Instruction("INC", "Increment by 1", 1, [
-            {"code": "1111111011000rrr", "operands": ["G"], "size": 8}, // AL, AH, BL, BH, etc
-            {"code": "01000rrr", "operands": ["G"], "size": 16} // AX, BX, CX, DX only
-        ],
-        function (op, op1) {
-            const opcode = this.opcodes[op];
-            let out = opcode.code.replace("rrr", op1.regBits);
-            return out;
-        }),
-    new Instruction("INT", "Call to interrupt", 1, [
-            {"code": "CD", "operands": ["I"], "size": 8}
-        ],
-        function (op, op1) {
-            const opcode = this.opcodes[op];
-            let out = parseInt(opcode.code, 16).toString(2);
-            out = out + op1.getBytes(opcode.size);
-            return out;
-        }),
+    new Instruction("INC", "Increment by 1", [
+            {code: "1111111011000rrr", operands: ["G"], size: 8}, // AL, AH, BL, BH, etc
+            {code: "01000rrr", operands: ["G"], size: 16} // AX, BX, CX, DX only
+        ], replaceGeneralOrSegmentRegOnly),
+    new Instruction("INT", "Call to interrupt", [
+            {"code": "CD", "operands": ["I"], size: 8}
+        ], convertHexToBinOptionalImm),
     new Instruction("INTO", "Call to interrupt if overflow"),
     new Instruction("IRET", "Return from interrupt"),
     new Instruction("JA", "Jump if Above"),
@@ -139,17 +163,18 @@ export const instructions = [
     new Instruction("LOOPNE", "Loop control and Not Equal"),
     new Instruction("LOOPZ", "Loop control and Zero"),
     new Instruction("LOOPNZ", "Loop control and Not Zero"),
-    new Instruction("MOV", "Move", 2, [
-            {"code": "1000100011rrrrrr", "operands": ["G", "G"], "size": 8}, //1 -> 2
-            {"code": "1000100111rrrrrr", "operands": ["G", "G"], "size": 16},//1 -> 2
-            {"code": "1000101011rrrrrr", "operands": ["G", "G"], "size": 8}, //2 -> 1
-            {"code": "1000101111rrrrrr", "operands": ["G", "G"], "size": 16},//2 -> 1
-            {"code": "10001000mmrrrrrr", "operands": ["G", "M"], "size": 8}, //1 -> 2
-            {"code": "10001001mmrrrrrr", "operands": ["G", "M"], "size": 16},//1 -> 2
-            {"code": "10001010mmrrrrrr", "operands": ["G", "M"], "size": 8}, //2 -> 1
-            {"code": "10001011mmrrrrrr", "operands": ["G", "M"], "size": 16},//2 -> 1
-            {"code": "10110rrr", "operands": ["G", "I"], "size": 8}, //I -> R
-            {"code": "10111rrr", "operands": ["G", "I"], "size": 16} //I -> R
+    new Instruction("MOV", "Move", [
+            {code: "10001110110rrrrr", operands: ["S", "G"], size: 16},
+            {code: "1000100011rrrrrr", operands: ["G", "G"], size: 8}, //1 -> 2
+            {code: "1000100111rrrrrr", operands: ["G", "G"], size: 16},//1 -> 2
+            {code: "1000101011rrrrrr", operands: ["G", "G"], size: 8}, //2 -> 1
+            {code: "1000101111rrrrrr", operands: ["G", "G"], size: 16},//2 -> 1
+            // {code: "10001000mmrrrrrr", operands: ["G", "M"], size: 8}, //1 -> 2
+            // {code: "10001001mmrrrrrr", operands: ["G", "M"], size: 16},//1 -> 2
+            // {code: "10001010mmrrrrrr", operands: ["G", "M"], size: 8}, //2 -> 1
+            // {code: "10001011mmrrrrrr", operands: ["G", "M"], size: 16},//2 -> 1
+            {code: "10110rrr", operands: ["G", "I"], size: 8}, //I -> R
+            {code: "10111rrr", operands: ["G", "I"], size: 16} //I -> R
             //{"code": "10000000mm100rrr", "operands": ["M", "I"], "size": 8}, //I -> M
             //{"code": "10000001mm100rrr", "operands": ["M", "I"], "size": 16},//I -> M
             //sign extend version
@@ -158,9 +183,15 @@ export const instructions = [
         ],
         function (op, op1, op2) {
             const opcode = this.opcodes[op];
-            let out = opcode.code.replace("rrr", op1.regBits);
+            let out = opcode.code;
 
-            if (this.opcodes[op].operands[1] === "I") {
+            if (opcode.operands[0] === "S") {
+                out = out.replace("rr", op1.regBits);
+            } else {
+                out = out.replace("rrr", op1.regBits);
+            }
+
+            if (opcode.operands[1] === "I") {
                 out = out + op2.getBytes(opcode.size);
             } else {
                 out = out.replace("rrr", op2.regBits);
@@ -176,25 +207,41 @@ export const instructions = [
     new Instruction("NOT", "Negate the operand, logical NOT"),
     new Instruction("OR", "Logical OR"),
     new Instruction("OUT", "Output to port"),
-    new Instruction("POP", "Pop data from stack"),
-    new Instruction("POPF", "Pop data from flags register"),
-    new Instruction("PUSH", "Push data onto stack"),
-    new Instruction("PUSHF", "Push flags onto stack"),
+    new Instruction("POP", "Pop data from stack", [
+        {code: "01011rrr", operands: ["G"], size: 8},
+        {code: "000rr111", operands: ["S"], size: 16}
+    ], replaceGeneralOrSegmentRegOnly),
+    new Instruction("POPF", "Pop data from flags register", [
+        {code: "9D", operands: [], size: null}
+    ], convertHexToBinNoParams),
+    new Instruction("PUSH", "Push data onto stack", [
+        {code: "01010rrr", operands: ["G"], size: 8},
+        {code: "000rr110", operands: ["S"], size: 16}
+    ], replaceGeneralOrSegmentRegOnly),
+    new Instruction("PUSHF", "Push flags onto stack", [
+        {code: "9C", operands: [], size: null}
+    ], convertHexToBinNoParams),
     new Instruction("RCL", "Rotate left (with carry)"),
     new Instruction("RCR", "Rotate right (with carry)"),
     new Instruction("RET", "Return from procedure"),
-    new Instruction("RETN", "Return from near procedure"),
-    new Instruction("RETF", "Return from far procedure"),
+    new Instruction("RETN", "Return from near procedure", [
+        {code: "C2", operands: ["I"], size: 16},
+        {code: "C3", operands: [], size: null}
+    ], convertHexToBinOptionalImm),
+    new Instruction("RETF", "Return from far procedure", [
+        {code: "CA", operands: ["I"], size: 16},
+        {code: "CB", operands: [], size: null}
+    ], convertHexToBinOptionalImm),
     new Instruction("ROL", "Rotate left"),
     new Instruction("ROR", "Rotate right"),
     new Instruction("SAHF", "Store AH into flags"),
     new Instruction("SAL", "Shift Arithmetically left (signed shift left)"),
     new Instruction("SAR", "Shift Arithmetically right (signed shift right)"),
-    new Instruction("SBB", "Subtraction with borrow", 2, [
-        {"code": "18", "operands": ["G", "E"], "size": 8},
-        {"code": "19", "operands": ["G", "E"], "size": 16},
-        {"code": "1A", "operands": ["E", "G"], "size": 8},
-        {"code": "1B", "operands": ["E", "G"], "size": 16}
+    new Instruction("SBB", "Subtraction with borrow", [
+        {code: "18", operands: ["G", "E"], size: 8},
+        {code: "19", operands: ["G", "E"], size: 16},
+        {code: "1A", operands: ["E", "G"], size: 8},
+        {code: "1B", operands: ["E", "G"], size: 16}
     ]),
     new Instruction("SCASB", "Compare byte string"),
     new Instruction("SCASW", "Compare word string"),
@@ -205,17 +252,17 @@ export const instructions = [
     new Instruction("STI", "Set interrupt flag"),
     new Instruction("STOSB", "Store byte in string"),
     new Instruction("STOSW", "Store word in string"),
-    new Instruction("SUB", "Subtraction", 2, [
-        {"code": "28", "operands": ["G", "E"], "size": 8},
-        {"code": "29", "operands": ["G", "E"], "size": 16},
-        {"code": "2A", "operands": ["E", "G"], "size": 8},
-        {"code": "2B", "operands": ["E", "G"], "size": 16}
+    new Instruction("SUB", "Subtraction", [
+        {code: "28", operands: ["G", "E"], size: 8},
+        {code: "29", operands: ["G", "E"], size: 16},
+        {code: "2A", operands: ["E", "G"], size: 8},
+        {code: "2B", operands: ["E", "G"], size: 16}
     ]),
     new Instruction("TEST", "Logical compare (AND)"),
     new Instruction("WAIT", "Wait until not busy"),
     new Instruction("XCHG", "Exchange data"),
     new Instruction("XLAT", "Table look-up translation"),
-    new Instruction("XOR", "Exclusive OR", 2, [
+    new Instruction("XOR", "Exclusive OR", [
         {code: "1000000011110rrr", "operands": ["G", "I"], "size": 8},
         {code: "1000001111110rrr", "operands": ["G", "I"], "size": 16},
         {code: "1000001111rrrrrr", "operands": ["G", "G"], "size": 16}

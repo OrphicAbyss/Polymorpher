@@ -1,6 +1,6 @@
 "use strict";
 
-import {Label, StrToken, Comma, NewLine} from "./tokeniser";
+import {Label, StrToken, Comma, Colon, NewLine} from "./tokeniser";
 import {Directive} from "./directive";
 import {Prefix} from "./prefix";
 import {Immediate} from "./immediate";
@@ -77,6 +77,16 @@ export function parse (tokens) {
         while (token instanceof Label) {
             statement.addLabel(token);
             token = getNext();
+            // labels followed by instructions should have a colon, labels followed by a directive don't
+            if (token instanceof Colon) {
+                token = getNext();
+            }
+
+            // check for line with only a label
+            if (token instanceof NewLine) {
+                // skip to next line and join label(s) to next statement line
+                token = getNext();
+            }
         }
 
         if (token instanceof Directive) {
@@ -84,10 +94,10 @@ export function parse (tokens) {
             statement.directive = token;
 
             token = getNext();
-            while (token instanceof Immediate || token instanceof StrToken) {
+            while (token instanceof Immediate || token instanceof StrToken || token instanceof Label) {
                 statement.addParameter(token);
                 token = getNext();
-                if (token instanceof Comma) {
+                if (token instanceof Comma || token instanceof Colon) {
                     token = getNext();
                 }
             }
@@ -104,7 +114,7 @@ export function parse (tokens) {
                 while (token instanceof Register || token instanceof Immediate || token instanceof Label) {
                     statement.addOperand(token);
                     token = getNext();
-                    if (token instanceof Comma) {
+                    if (token instanceof Comma || token instanceof Colon) {
                         token = getNext();
                     }
                 }
