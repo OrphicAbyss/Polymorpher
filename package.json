@@ -20,6 +20,7 @@
   "private": true,
   "scripts": {
     "start": "node app.js",
-    "build": "webpack --mode=development --watch"
+    "build": "webpack --mode=development --watch",
+    "build:prod": "webpack"
   }
 }

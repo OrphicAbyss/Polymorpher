@@ -144,7 +144,13 @@ export default function App () {
                         <Box pad="medium">
                             {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
                             {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
-                            {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))};
+                            <Button href={url} label="Download Machine Code" download="code.com"/>
+                        </Box>
+                    </Tab>
+                    <Tab title="Formatted Binary">
+                        <Box pad="medium">
+                            {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                            {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
                             <Button href={url} label="Download Machine Code" download="code.com"/>
                         </Box>
                     </Tab>

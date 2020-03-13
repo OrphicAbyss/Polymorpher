@@ -4,7 +4,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const port = 3333;
+const port = process.env.PORT || 3333;
 
 function onRequest(request, response) {
     var pathname = request.url,
