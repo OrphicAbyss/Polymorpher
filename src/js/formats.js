@@ -59,7 +59,7 @@ class Format {
             // replace binary output of code with fixed offset
             const opcode = placeholder.opcode;
             if (opcode !== null) {
-                this.binaryOutput[placeholder.position] = placeholder.instruction.toCode(opcode, ...fixedOperands);
+                this.binaryOutput[placeholder.position] = opcode.getBytes(...fixedOperands);
             }
         });
     }
@@ -233,7 +233,7 @@ export class FormatMZ extends Format {
             // replace binary output of code with fixed offset
             const opcode = placeholder.opcode;
             if (opcode !== null) {
-                this.binaryOutput[placeholder.position] = placeholder.instruction.toCode(opcode, ...fixedOperands);
+                this.binaryOutput[placeholder.position] = opcode.getBytes(fixedOperands);
             }
         });
     }

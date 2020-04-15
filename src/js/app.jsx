@@ -110,7 +110,6 @@ export default function App () {
         <div>
             <Grommet>
                 <Header background="dark-1">
-                    {/*<Header background="dark-1" pad="medium">*/}
                     <Box direction="row" align="center" gap="small">
                         <Heading color="white" size="small">
                             WebAssembler
@@ -125,11 +124,11 @@ export default function App () {
                             <AceEditor theme="tomorrow" mode="assembly_x86" value={code} onChange={codeUpdate} name="ace" width="100%" fontSize={16}/>
                         </Box>
                     </Tab>
-                    <Tab title="Lexemes">
-                        <Box pad="medium">
-                            {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}
-                        </Box>
-                    </Tab>
+                    {/*<Tab title="Lexemes">*/}
+                    {/*    <Box pad="medium">*/}
+                    {/*        {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
+                    {/*    </Box>*/}
+                    {/*</Tab>*/}
                     <Tab title="Tokens">
                         <Box pad="medium">
                             {tokens.map((token, i) => (<div key={i} style={{color: getColor(token.type)}}>{token.toString() + " " + token.type}</div>))}

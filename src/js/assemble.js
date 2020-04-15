@@ -76,31 +76,42 @@ export function assemble(statements) {
                     }
                     if (!instruction.opcodes) {
                         addError(position, `Instruction not yet supported, ${instruction.key} ignored!`);
-                    } else if (!instruction.toCode) {
+                    } else if (!instruction.opcodes) {
                         addError(position, `Instruction code generation not supported yet, ${instruction.key} ignored!`);
                     } else {
                         const opcodes = instruction.opcodes;
                         let matched = false;
                         try {
-                            for (let i = 0; i < opcodes.length; i++) {
-                                const opcode = instruction.opcodes[i];
-                                // ensure provided operands and expected operands match
-                                if ((operands.length === 0 && opcode.operands.length === 0) || (opcode.operands && operands.length === opcode.operands.length)) {
-                                    const matchCodes = operands.map((operand, j) => {
-                                        return operand.bits === opcode.size && operand.types.includes(opcode.operands[j])
-                                    });
-                                    const match = matchCodes.reduce((a, b) => a && b, true);
+                            const opCode = instruction.findOpCode(operands);
 
-                                    if (match) {
-                                        if (placeholder) {
-                                            format.placeholders[format.placeholders.length - 1].opcode = i;
-                                        }
-                                        format.binaryOutput.push(instruction.toCode(i, ...operands));
-                                        matched = true;
-                                        break;
-                                    }
+                            if (opCode) {
+                                if (placeholder) {
+                                    format.placeholders[format.placeholders.length - 1].opcode = opCode;
                                 }
+                                format.binaryOutput.push(opCode.getBytes(operands));
+                                matched = true;
                             }
+
+                            // for (let i = 0; i < opcodes.length; i++) {
+                            //
+                            //     const opcode = instruction.opcodes[i];
+                            //     // ensure provided operands and expected operands match
+                            //     if ((operands.length === 0 && opcode.operands.length === 0) || (opcode.operands && operands.length === opcode.operands.length)) {
+                            //         const matchCodes = operands.map((operand, j) => {
+                            //             return operand.bits === opcode.size && operand.types.includes(opcode.operands[j])
+                            //         });
+                            //         const match = matchCodes.reduce((a, b) => a && b, true);
+                            //
+                            //         if (match) {
+                            //             if (placeholder) {
+                            //                 format.placeholders[format.placeholders.length - 1].opcode = i;
+                            //             }
+                            //             format.binaryOutput.push(instruction.toCode(i, ...operands));
+                            //             matched = true;
+                            //             break;
+                            //         }
+                            //     }
+                            // }
                         } catch (e) {
                             console.log(e);
                         }

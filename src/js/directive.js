@@ -1,6 +1,6 @@
 "use strict";
 
-import {Label, StrToken} from "./tokeniser";
+import {StrToken} from "./tokeniser";
 import {Immediate} from "./immediate";
 
 export class Directive {

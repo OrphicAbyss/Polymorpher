@@ -11,9 +11,13 @@ export class Register {
         this.type = "REGISTER";
     }
 
+    getBytes () {
+        return this.regBits;
+    }
+
     toString () {
         return `Register (${this.key})`;
-    };
+    }
 }
 
 export const registers = [
@@ -39,3 +43,6 @@ export const registers = [
     new Register("SS", 16, ["S"], "10", "Stack Segment", "Segment register")
 ];
 
+export function reg(regCode) {
+    return registers.find((reg) => reg.key === regCode);
+}
