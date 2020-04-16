@@ -69,9 +69,11 @@ class OpCodeOnly extends OpCode {
      * OpCodes that don't take a parameter
      *
      * @param {string} code Hex Code on Instruction
+     * @param {int} size
+     * @param {[]} operands
      */
-    constructor (code) {
-        super(code, null, []);
+    constructor (code, size, operands) {
+        super(code, size || null, operands || []);
     }
 
     match (operands) {
@@ -83,7 +85,7 @@ class OpCodeOnly extends OpCode {
     }
 }
 
-class OpCodeWithReg extends OpCode {
+class OpCodeWithReg extends OpCodeOnly {
     /**
      * OpCodes that take a specific register as a parameter
      *
@@ -91,9 +93,7 @@ class OpCodeWithReg extends OpCode {
      * @param {Register} register Specific register expected
      */
     constructor (code, register) {
-        const size = register.bits;
-        const operand = [register.key];
-        super(code, size, operand);
+        super(code, register.bits, [register.types[0]]);
 
         this.register = register;
     }
@@ -101,9 +101,27 @@ class OpCodeWithReg extends OpCode {
     match (operands) {
         return operands.length === 1 && operands[0] instanceof Register && operands[0].key === this.register.key;
     }
+}
 
-    getBytes () {
-        return this.hexToBinary(this.code);
+class OpCodeWithRegAndReg extends OpCodeOnly {
+    /**
+     * OpCodes that take a specific register and immediate value as parameters
+     *
+     * @param {string} code Hex Code of the Instruction
+     * @param {Register} register1 Specific 1 register expected
+     * @param {Register} register2 Specific 2 register expected
+     */
+    constructor (code, register1, register2) {
+        super(code);
+
+        this.register1 = register1;
+        this.register2 = register2;
+    }
+
+    match (operands) {
+        return operands.length === 2
+            && operands[0] instanceof Register && operands[0].key === this.register1.key
+            && operands[1] instanceof Register && operands[1].key === this.register2.key;
     }
 }
 
@@ -113,6 +131,7 @@ class OpCodeWithImm extends OpCode {
      *
      * @param {string} code Hex Code of the Instruction
      * @param {int} size Bit size of immediate
+     * @param {int} count Number of immediates allowed
      */
     constructor (code, size, count) {
         const operands = [];
@@ -134,7 +153,7 @@ class OpCodeWithImm extends OpCode {
     }
 }
 
-class OpCodeWithRegAndImm extends OpCode {
+class OpCodeWithRegAndImm extends OpCodeWithImm {
     /**
      * OpCodes that take a specific register and immediate value as parameters
      *
@@ -143,9 +162,9 @@ class OpCodeWithRegAndImm extends OpCode {
      */
     constructor (code, register) {
         const size = register.bits;
-        const operand = [register.key];
-        super(code, size, operand);
+        super(code, size, 1);
 
+        this.operands = [register.key, "I"];
         this.register = register;
     }
 
@@ -770,14 +789,14 @@ export const instructions = [
     ]),
     new Instruction("XCHG", "Exchange data", [
         new OpCodeWithModMR("86", 8, ["G", "G"]),
-        new OpCodeWithModMR("87", 16, ["G", "G"])
-        // AX, CX
-        // AX, DX
-        // AX, BX
-        // AX, SP
-        // AX, BP
-        // AX, SI
-        // AX, DI
+        new OpCodeWithModMR("87", 16, ["G", "G"]),
+        new OpCodeWithRegAndReg("91", reg("AX"), reg("CX")),
+        new OpCodeWithRegAndReg("92", reg("AX"), reg("DX")),
+        new OpCodeWithRegAndReg("93", reg("AX"), reg("BX")),
+        new OpCodeWithRegAndReg("94", reg("AX"), reg("SP")),
+        new OpCodeWithRegAndReg("95", reg("AX"), reg("BP")),
+        new OpCodeWithRegAndReg("96", reg("AX"), reg("SI")),
+        new OpCodeWithRegAndReg("97", reg("AX"), reg("DI")),
     ]),
     new Instruction("XLAT", "Table look-up translation", [
         new OpCodeOnly("D7")
