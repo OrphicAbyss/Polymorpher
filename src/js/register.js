@@ -37,12 +37,19 @@ export const registers = [
     new Register("BP", 16, ["G"], "101", "Base Pointer", "Index register"),
     new Register("SI", 16, ["G"], "110", "Source Index", "Index register"),
     new Register("DI", 16, ["G"], "111", "Destination Index", "Index register"),
-    new Register("CS", 16, ["S"], "01", "Code Segment", "Segment register"),
-    new Register("DS", 16, ["S"], "11", "Data Segment", "Segment register"),
-    new Register("ES", 16, ["S"], "00", "Extra Segment", "Segment register"),
-    new Register("SS", 16, ["S"], "10", "Stack Segment", "Segment register")
+    // TODO: segment registers are really only 2 bit values, but they only seem to be used as 3 bit encodings
+    new Register("CS", 16, ["S"], "001", "Code Segment", "Segment register"),
+    new Register("DS", 16, ["S"], "011", "Data Segment", "Segment register"),
+    new Register("ES", 16, ["S"], "000", "Extra Segment", "Segment register"),
+    new Register("SS", 16, ["S"], "010", "Stack Segment", "Segment register")
 ];
 
+/**
+ * Looks up a register object based on the register name (key)
+ *
+ * @param {string} regCode Name of the register
+ * @return {Register} Register object found
+ */
 export function reg(regCode) {
     return registers.find((reg) => reg.key === regCode);
 }

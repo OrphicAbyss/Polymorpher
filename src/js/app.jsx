@@ -2,6 +2,8 @@
 
 import React from "react";
 import {Grommet, Header, Tabs, Tab, Box, Heading, Footer, Clock, Button} from "grommet";
+import {InstructionTable} from "./instruction_table";
+import {V86Terminal} from "./v86";
 import {schemeCategory10} from "d3-scale-chromatic";
 import {scanCode} from "./scanner";
 import {tokenise} from "./tokeniser";
@@ -107,58 +109,66 @@ export default function App () {
     const url = URL.createObjectURL(blob);
 
     return (
-        <div>
-            <Grommet>
-                <Header background="dark-1">
-                    <Box direction="row" align="center" gap="small">
-                        <Heading color="white" size="small">
-                            WebAssembler
-                        </Heading>
-                        <div>An online x86 assembler</div>
+        <Grommet>
+            <Header background="dark-1">
+                <Box direction="row" align="center" gap="small">
+                    <Heading color="white" size="small">
+                        WebAssembler
+                    </Heading>
+                    <div>An online x86 assembler</div>
+                </Box>
+            </Header>
+
+            <Tabs>
+                <Tab title="Instructions">
+                    <Box pad="medium">
+                        <InstructionTable/>
                     </Box>
-                </Header>
+                </Tab>
+                <Tab title="Code">
+                    <Box pad="medium">
+                        <AceEditor theme="tomorrow" mode="assembly_x86" value={code} onChange={codeUpdate} name="ace" width="100%" fontSize={16}/>
+                    </Box>
+                </Tab>
+                {/*<Tab title="Lexemes">*/}
+                {/*    <Box pad="medium">*/}
+                {/*        {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
+                {/*    </Box>*/}
+                {/*</Tab>*/}
+                <Tab title="Tokens">
+                    <Box pad="medium">
+                        {tokens.map((token, i) => (<div key={i} style={{color: getColor(token.type)}}>{token.toString() + " " + token.type}</div>))}
+                    </Box>
+                </Tab>
+                <Tab title="Parsed">
+                    <Box pad="medium">
+                        {parsed.map((statement, i) => (<div key={i} style={{color: getColor(statement.getType())}}>{statement.toString() + " " + statement.getType()}</div>))}
+                    </Box>
+                </Tab>
+                <Tab title="Binary">
+                    <Box pad="medium">
+                        {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                        {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
+                        <Button href={url} label="Download Machine Code" download="code.com"/>
+                    </Box>
+                </Tab>
+                <Tab title="Formatted Binary">
+                    <Box pad="medium">
+                        {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                        {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
+                        <Button href={url} label="Download Machine Code" download="code.com"/>
+                    </Box>
+                </Tab>
+                {/*<Tab title="x86 Virtual Machine">*/}
+                {/*    <Box pad="medium">*/}
+                {/*        <V86Terminal/>*/}
+                {/*    </Box>*/}
+                {/*</Tab>*/}
+            </Tabs>
 
-                <Tabs>
-                    <Tab title="Code">
-                        <Box pad="medium">
-                            <AceEditor theme="tomorrow" mode="assembly_x86" value={code} onChange={codeUpdate} name="ace" width="100%" fontSize={16}/>
-                        </Box>
-                    </Tab>
-                    {/*<Tab title="Lexemes">*/}
-                    {/*    <Box pad="medium">*/}
-                    {/*        {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
-                    {/*    </Box>*/}
-                    {/*</Tab>*/}
-                    <Tab title="Tokens">
-                        <Box pad="medium">
-                            {tokens.map((token, i) => (<div key={i} style={{color: getColor(token.type)}}>{token.toString() + " " + token.type}</div>))}
-                        </Box>
-                    </Tab>
-                    <Tab title="Parsed">
-                        <Box pad="medium">
-                            {parsed.map((statement, i) => (<div key={i} style={{color: getColor(statement.getType())}}>{statement.toString() + " " + statement.getType()}</div>))}
-                        </Box>
-                    </Tab>
-                    <Tab title="Binary">
-                        <Box pad="medium">
-                            {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                            {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
-                            <Button href={url} label="Download Machine Code" download="code.com"/>
-                        </Box>
-                    </Tab>
-                    <Tab title="Formatted Binary">
-                        <Box pad="medium">
-                            {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                            {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
-                            <Button href={url} label="Download Machine Code" download="code.com"/>
-                        </Box>
-                    </Tab>
-                </Tabs>
+            <Footer background="dark-1">
 
-                <Footer background="dark-1">
-
-                </Footer>
-            </Grommet>
-        </div>
+            </Footer>
+        </Grommet>
     );
 }
