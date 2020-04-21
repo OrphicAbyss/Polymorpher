@@ -121,14 +121,16 @@ export default function App () {
 
             <Tabs>
                 <Tab title="Instructions">
-                    {/*<Box pad="medium">*/}
+                    <Box pad="medium">
+                        <Heading>Instruction List and Details</Heading>
+                        <InstructionTable/>
+                    </Box>
+                </Tab>
+                <Tab title="Op Codes">
                     <Box><Heading>Op Code Table</Heading></Box>
                     <Box overflow="scroll"><InstructionGrid/></Box>
                     <Box><Heading>Sub Op Code Table</Heading></Box>
                     <Box><InstructionSubGrid/></Box>
-                    <Box><Heading>Instruction List and Details</Heading></Box>
-                    <Box><InstructionTable/></Box>
-                    {/*</Box>*/}
                 </Tab>
                 <Tab title="Code">
                     <Box pad="medium">
