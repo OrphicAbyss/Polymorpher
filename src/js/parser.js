@@ -1,11 +1,12 @@
 "use strict";
 
-import {Label, StrToken, Comma, Colon, NewLine} from "./tokeniser";
+import {Bracket, Comma, Colon, Label, NewLine, StrToken, Plus} from "./tokeniser";
 import {Directive} from "./directive";
 import {Prefix} from "./prefix";
 import {Immediate} from "./immediate";
 import {Instruction} from "./instruction";
 import {Register} from "./register";
+import {Memory} from "./memory";
 
 class Statement {
     constructor () {
@@ -72,7 +73,8 @@ export function parse (tokens) {
         //statement -> [labels+] (directive... | [prefix] instruction operand [, operand]) \n
         //directive -> directive parameter [, parameter]
         //parameter -> (immediate | string)
-        //operand -> (register | immediate | label)  //todo: handle pointer
+        //operand -> (memory | register | immediate | label)  //todo: handle pointer
+        //memory -> \[register | immediate\]
 
         while (token instanceof Label) {
             statement.addLabel(token);
@@ -102,6 +104,7 @@ export function parse (tokens) {
                 }
             }
         } else if (token instanceof Prefix || token instanceof Instruction) {
+            // TODO: support multiple Prefixes
             if (token instanceof Prefix) {
                 statement.prefix = token;
                 token = getNext();
@@ -111,9 +114,28 @@ export function parse (tokens) {
                 statement.instruction = token;
                 token = getNext();
 
-                while (token instanceof Register || token instanceof Immediate || token instanceof Label) {
-                    statement.addOperand(token);
-                    token = getNext();
+                while (token instanceof Bracket || token instanceof Register || token instanceof Immediate || token instanceof Label) {
+                    if (token instanceof Bracket && token.label === "[") {
+                        const memory = new Memory();
+                        // handle memory operand
+                        token = getNext();
+
+                        while (token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
+                            memory.addToken(token);
+                            token = getNext();
+                        }
+
+                        statement.addOperand(memory);
+                        if (token instanceof Bracket && token.label === "]") {
+                            token = getNext();
+                        } else {
+                            // Expect a close bracket to end memory operand
+                            break;
+                        }
+                    } else {
+                        statement.addOperand(token);
+                        token = getNext();
+                    }
                     if (token instanceof Comma || token instanceof Colon) {
                         token = getNext();
                     }

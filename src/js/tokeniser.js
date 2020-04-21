@@ -6,7 +6,20 @@ import {directives} from "./directive";
 import {registers} from "./register";
 import {Immediate} from "./immediate";
 
-import {UNKNOWN, COMMENT, IDENTIFIER, NUMERIC, COLON, COMMA, STRING, NEW_LINE, Token} from "./tokens";
+import {
+    UNKNOWN,
+    BRACKET_LEFT,
+    BRACKET_RIGHT,
+    COLON,
+    COMMA,
+    COMMENT,
+    IDENTIFIER,
+    NEW_LINE,
+    NUMERIC,
+    PLUS,
+    STRING,
+    Token
+} from "./tokens";
 
 export class Label {
     constructor (label) {
@@ -16,6 +29,17 @@ export class Label {
 
     toString () {
         return `Label (${this.label})`;
+    }
+}
+
+export class Bracket {
+    constructor (symbol) {
+        this.label = symbol;
+        this.type = "BRACKET";
+    }
+
+    toString () {
+        return `Bracket (${this.label})`;
     }
 }
 
@@ -49,6 +73,17 @@ export class NewLine {
 
     toString () {
         return "New Line (\\n)";
+    }
+}
+
+export class Plus {
+    constructor () {
+        this.label = "+";
+        this.type = "PLUS";
+    }
+
+    toString () {
+        return "Plus (+)";
     }
 }
 
@@ -114,6 +149,14 @@ export function tokenise (lexemes) {
                 tokens.push(new Comma());
                 current++;
                 break;
+            case BRACKET_LEFT:
+                tokens.push(new Bracket("["));
+                current++;
+                break;
+            case BRACKET_RIGHT:
+                tokens.push(new Bracket("]"));
+                current++;
+                break;
             case STRING:
                 tokens.push(new StrToken(token.token));
                 current++;
@@ -123,6 +166,11 @@ export function tokenise (lexemes) {
                 if (!(tokens[length - 1] instanceof NewLine) && length > 0) {
                     tokens.push(new NewLine());
                 }
+                current++;
+                break;
+            default:
+                // unknown token
+                console.log("Unknown token" + token);
                 current++;
                 break;
         }

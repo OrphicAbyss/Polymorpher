@@ -1,7 +1,8 @@
 "use strict";
 
-import {COLON, COMMA, COMMENT, IDENTIFIER, NEW_LINE, NUMERIC, STRING, UNKNOWN, Token} from "./tokens";
+import {BRACKET_LEFT, BRACKET_RIGHT, COLON, COMMA, COMMENT, IDENTIFIER, NEW_LINE, NUMERIC, STRING, UNKNOWN, Token} from "./tokens";
 const WHITESPACE = [" ", "\t"];
+const NON_TEXT = [" ", ";", ":", "\n", "\t", ",", "[", "]", "+"];
 
 /**
  * Takes the code string and deals with pulling out characters in groups required by the tokeniser.
@@ -93,15 +94,19 @@ export function scanCode (text) {
             lexeme = new Token(COMMENT, scanner.getChars(["\n"]));
         } else if (/^[a-z]$/i.test(char)) {
             // we matched a text token
-            lexeme = new Token(IDENTIFIER, scanner.getChars([" ", ";", ":", "\n", "\t", ","]));
+            lexeme = new Token(IDENTIFIER, scanner.getChars(NON_TEXT));
         } else if (/^[0-9]$/i.test(char)) {
             // we matched a number token
-            lexeme = new Token(NUMERIC, scanner.getChars([" ", ";", "\n", "\t", ","]));
+            lexeme = new Token(NUMERIC, scanner.getChars(NON_TEXT));
         } else if (/^[,]$/i.test(char)) {
             // we matched a comma
             lexeme = new Token(COMMA, scanner.skipChar());
         } else if (/^[:]$/i.test(char)) {
             lexeme = new Token(COLON, scanner.skipChar());
+        } else if (/^[\[]$/i.test(char)) {
+            lexeme = new Token(BRACKET_LEFT, scanner.skipChar());
+        } else if (/^[\]]$/i.test(char)) {
+            lexeme = new Token(BRACKET_RIGHT, scanner.skipChar());
         } else if (/^[\"|\']$/i.test(char)) {
             // we matched a string literal
             scanner.skipChar();

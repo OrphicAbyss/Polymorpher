@@ -1,8 +1,8 @@
 "use strict";
 
 import React from "react";
-import {Grommet, Header, Tabs, Tab, Box, Heading, Footer, Clock, Button} from "grommet";
-import {InstructionTable} from "./instruction_table";
+import {Grommet, Header, Tabs, Tab, Text, Box, Heading, Footer, Button} from "grommet";
+import {InstructionGrid, InstructionSubGrid, InstructionTable} from "./instruction_table";
 import {V86Terminal} from "./v86";
 import {schemeCategory10} from "d3-scale-chromatic";
 import {scanCode} from "./scanner";
@@ -121,9 +121,14 @@ export default function App () {
 
             <Tabs>
                 <Tab title="Instructions">
-                    <Box pad="medium">
-                        <InstructionTable/>
-                    </Box>
+                    {/*<Box pad="medium">*/}
+                    <Box><Heading>Op Code Table</Heading></Box>
+                    <Box overflow="scroll"><InstructionGrid/></Box>
+                    <Box><Heading>Sub Op Code Table</Heading></Box>
+                    <Box><InstructionSubGrid/></Box>
+                    <Box><Heading>Instruction List and Details</Heading></Box>
+                    <Box><InstructionTable/></Box>
+                    {/*</Box>*/}
                 </Tab>
                 <Tab title="Code">
                     <Box pad="medium">
