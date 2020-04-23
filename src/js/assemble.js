@@ -79,7 +79,6 @@ export function assemble(statements) {
                     } else if (!instruction.opcodes) {
                         addError(position, `Instruction code generation not supported yet, ${instruction.key} ignored!`);
                     } else {
-                        const opcodes = instruction.opcodes;
                         let matched = false;
                         try {
                             const opCode = instruction.findOpCode(operands);
@@ -113,7 +112,7 @@ export function assemble(statements) {
                             //     }
                             // }
                         } catch (e) {
-                            console.log(e);
+                            addError(position, `Error creating output for instruction ${e.toString()}`);
                         }
                         if (!matched) {
                             addError(position, `Unable to match instruction (${instruction.key}) and operands (${operands.map((o) => o.key).join(", ")}) to opcode.`);
@@ -168,6 +167,10 @@ export function assemble(statements) {
         }
     } catch (e) {
         console.error(e);
-        return {binaryOutput: [], errors: [e]};
+        return {
+            binaryOutput: [],
+            formattedBin: [],
+            errors: [e]
+        };
     }
 }

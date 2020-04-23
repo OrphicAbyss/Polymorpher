@@ -82,6 +82,7 @@ export const directives = [
     new Directive("ENTRY", "Program Entry Point", true),
     new Directive("STACK", "Size of Stack", true),
     new Directive("HEAP", "Size of Heap", true),
+    new Directive("INCLUDE", "Include file text", true),
     new SegmentDirective("SEGMENT", "Segment Start and Label"),
     new DefineDataDirective("DB", "Define Byte", 8),
     new DefineDataDirective("DW", "Define Word", 16),

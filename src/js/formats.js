@@ -59,7 +59,11 @@ class Format {
             // replace binary output of code with fixed offset
             const opcode = placeholder.opcode;
             if (opcode !== null) {
-                this.binaryOutput[placeholder.position] = opcode.getBytes(...fixedOperands);
+                try {
+                    this.binaryOutput[placeholder.position] = opcode.getBytes(...fixedOperands);
+                } catch (e) {
+                    console.log(placeholder.position, `Error regenerating instruction: ${opcode.instruction.key} ${fixedOperands.join(", ")}`);
+                }
             }
         });
     }
@@ -125,7 +129,7 @@ export class SegmentReference {
 export class FormatMZ extends Format {
     constructor (addErrorFn) {
         super("MZ", addErrorFn);
-        this.validDirectives.push("ENTRY", "STACK", "SEGMENT");
+        this.validDirectives.push("ENTRY", "STACK", "SEGMENT", "INCLUDE");
 
         this.segments = [];
         this.segmentReferences = [];

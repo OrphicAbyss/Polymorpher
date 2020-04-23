@@ -217,7 +217,7 @@ class MemParam extends Parameter {
     }
 
     match (op) {
-        return (op instanceof Register && op.bits === this.bits && op.types.includes(this.type));
+        return (op instanceof Memory) && op.isDisplacmentOnly();
     }
 
     asOpString () {
@@ -373,7 +373,7 @@ class OpCode extends OpCodeBase {
         }
         // add any immediate value to output
         this.operands.forEach((op, i) => {
-            if (op instanceof ImmParam || op instanceof RelParam || op instanceof PtrParam) {
+            if (op instanceof ImmParam || op instanceof RelParam || op instanceof PtrParam || op instanceof MemParam) {
                 output += operands[i].getBytes(op.bits);
             }
         });
@@ -931,10 +931,14 @@ export const instructions = [
         new OpCode("BD", null, [new FixedRegParam("BP"), new ImmParam(16)]),
         new OpCode("BE", null, [new FixedRegParam("SI"), new ImmParam(16)]),
         new OpCode("BF", null, [new FixedRegParam("DI"), new ImmParam(16)]),
+        new OpCode("A0", null, [new FixedRegParam("AL"), new MemParam(8)]),
+        new OpCode("A1", null, [new FixedRegParam("AX"), new MemParam(16)]),
+        new OpCode("A2", null, [new MemParam(8), new FixedRegParam("AL")]),
+        new OpCode("A3", null, [new MemParam(16), new FixedRegParam("AX")]),
         new OpCodeModRM("88", null, [new RegMemParam(8, "G"), new RegParam(8, "G")]),
         new OpCodeModRM("89", null, [new RegMemParam(16, "G"), new RegParam(16, "G")]),
-        new OpCodeModRM("8A", null, [new RegMemParam(8, "G"), new RegParam(8, "G")]),
-        new OpCodeModRM("8B", null, [new RegMemParam(16, "G"), new RegParam(16, "G")]),
+        new OpCodeModRM("8A", null, [new RegParam(8, "G"), new RegMemParam(8, "G")]),
+        new OpCodeModRM("8B", null, [new RegParam(16, "G"), new RegMemParam(16, "G")]),
         new OpCodeModRM("8C", null, [new RegMemParam(16, "G"), new RegParam(16, "S")]),
         new OpCodeModRM("8E", null, [new RegParam(16, "S"), new RegMemParam(16, "G")]),
         new OpCodeModRM("C6", "00", [new RegMemParam(8, "G"), new ImmParam(8)]),
@@ -1028,13 +1032,13 @@ export const instructions = [
         new OpCodeModRM("D0", "10", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "10", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "10", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "10", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "10", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("RCR", "Rotate right (with carry)", [
         new OpCodeModRM("D0", "18", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "18", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "18", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "18", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "18", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("RET", "Return from near procedure", [
         new OpCode("C2", null, [new ImmParam(16)]),
@@ -1052,13 +1056,13 @@ export const instructions = [
         new OpCodeModRM("D0", "00", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "00", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "00", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "00", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "00", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("ROR", "Rotate right", [
         new OpCodeModRM("D0", "08", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "08", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "08", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "08", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "08", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SAHF", "Store AH into flags", [
         new OpCode("9E")
@@ -1067,13 +1071,13 @@ export const instructions = [
         new OpCodeModRM("D0", "30", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "30", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "30", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "30", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "30", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SAR", "Shift Arithmetically right (signed shift right)", [
         new OpCodeModRM("D0", "38", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "38", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "38", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "38", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "38", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SBB", "Subtraction with borrow", [
         new OpCode("1C", null, [new FixedRegParam("AL"), new ImmParam(8)]),
@@ -1096,13 +1100,13 @@ export const instructions = [
         new OpCodeModRM("D0", "20", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "20", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "20", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "20", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "20", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SHR", "Shift right (unsigned shift right)", [
         new OpCodeModRM("D0", "28", [new RegMemParam(8), new FixedImmParam(1)]),
         new OpCodeModRM("D1", "28", [new RegMemParam(16), new FixedImmParam(1)]),
         new OpCodeModRM("D2", "28", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "28", [new RegMemParam(16), new FixedImmParam("CL")])
+        new OpCodeModRM("D3", "28", [new RegMemParam(16), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("STC", "Set carry flag", [
         new OpCode("F9")

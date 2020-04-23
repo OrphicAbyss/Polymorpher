@@ -132,6 +132,16 @@ export function parse (tokens) {
                             // Expect a close bracket to end memory operand
                             break;
                         }
+                    } else if (token instanceof Label && token.label === "ptr") {
+                        const memory = new Memory();
+                        //handle memory operand
+                        token = getNext();
+
+                        while (token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
+                            memory.addToken(token);
+                            token = getNext();
+                        }
+                        statement.addOperand(memory);
                     } else {
                         statement.addOperand(token);
                         token = getNext();
