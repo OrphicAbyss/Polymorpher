@@ -83,6 +83,8 @@ export const directives = [
     new Directive("STACK", "Size of Stack", true),
     new Directive("HEAP", "Size of Heap", true),
     new Directive("INCLUDE", "Include file text", true),
+    new Directive("BYTE", "Byte size operand"),
+    new Directive("WORD", "Word size operand"),
     new SegmentDirective("SEGMENT", "Segment Start and Label"),
     new DefineDataDirective("DB", "Define Byte", 8),
     new DefineDataDirective("DW", "Define Word", 16),

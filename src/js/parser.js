@@ -3,7 +3,7 @@
 import {Bracket, Comma, Colon, Label, NewLine, StrToken, Plus} from "./tokeniser";
 import {Directive} from "./directive";
 import {Prefix} from "./prefix";
-import {Immediate} from "./immediate";
+import {Immediate, PlaceholderImmediate} from "./immediate";
 import {Instruction} from "./instruction";
 import {Register} from "./register";
 import {Memory} from "./memory";
@@ -63,6 +63,7 @@ class Statement {
 export function parse (tokens) {
     let position = 0;
     const getNext = () => tokens[++position];
+    const lookNext = () => tokens[position + 1];
     const statements = [];
 
     while (tokens.length > position) {
@@ -114,14 +115,16 @@ export function parse (tokens) {
                 statement.instruction = token;
                 token = getNext();
 
-                while (token instanceof Bracket || token instanceof Register || token instanceof Immediate || token instanceof Label) {
+                while (token instanceof Bracket || token instanceof Register || token instanceof Immediate || token instanceof Label || token instanceof Directive) {
                     if (token instanceof Bracket && token.label === "[") {
                         const memory = new Memory();
                         // handle memory operand
                         token = getNext();
 
-                        while (token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
-                            memory.addToken(token);
+                        while (token instanceof Colon || token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
+                            if (!(token instanceof Colon || token instanceof Plus)) {
+                                memory.addToken(token);
+                            }
                             token = getNext();
                         }
 
@@ -137,12 +140,38 @@ export function parse (tokens) {
                         //handle memory operand
                         token = getNext();
 
-                        while (token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
-                            memory.addToken(token);
+                        while (token instanceof Colon || token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
+                            if (!(token instanceof Colon || token instanceof Plus)) {
+                                memory.addToken(token);
+                            }
                             token = getNext();
                         }
                         statement.addOperand(memory);
                     } else {
+                        if (token instanceof Directive) {
+                            let bits = null;
+                            if (token.key === "BYTE") {
+                                bits = 8;
+                            } else if (token.key === "WORD") {
+                                bits = 16;
+                            } else {
+                                // directive must be a size directive
+                                break;
+                            }
+
+                            if (!(lookNext() instanceof Immediate || lookNext() instanceof Label)) {
+                                // immediate must follow size directive
+                                break;
+                            }
+                            token = getNext();
+                            if (token instanceof Label) {
+                                token = new PlaceholderImmediate(token);
+                            }
+                            token.setBits(bits);
+                        }
+                        if (token instanceof Label) {
+                            token = new PlaceholderImmediate(token);
+                        }
                         statement.addOperand(token);
                         token = getNext();
                     }

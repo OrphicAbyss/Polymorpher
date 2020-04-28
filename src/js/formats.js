@@ -3,6 +3,7 @@
 import {StrToken} from "./tokeniser";
 import {Immediate, PlaceholderImmediate} from "./immediate";
 import {DefineDataDirective, ReserveDataDirective} from "./directive";
+import {RelParam} from "./instruction";
 
 class Format {
     constructor (name, addErrorFn) {
@@ -18,7 +19,7 @@ class Format {
     addLabel (label) {
         const codeLocation = this.getCurrentCodeLocation();
         const offset = codeLocation + this.orgOffset;
-        this.labels.push({label, codeLocation, offset});
+        this.labels.push({label, codeLocation, offset, pos: this.binaryOutput.length});
     }
 
     addPlaceholder (instruction, operands) {
@@ -38,7 +39,10 @@ class Format {
 
     regenPlaceholders () {
         this.placeholders.forEach((placeholder) => {
-            const fixedOperands = placeholder.operands.map((operand) => {
+            // replace binary output of code with fixed offset
+            const opcode = placeholder.opcode;
+
+            const fixedOperands = placeholder.operands.map((operand, i) => {
                 if (operand instanceof PlaceholderImmediate) {
                     const position = placeholder.position;
                     const label = operand.label;
@@ -48,7 +52,18 @@ class Format {
                             console.log(position, `No label definition found during 2 pass processing: ${label.label}`);
                             return operand;
                         case 1:
-                            return new Immediate(posLabel[0].offset);
+                            if (opcode.operands[i] instanceof RelParam) {
+                                let pos = placeholder.position;
+                                if (posLabel[0].pos > placeholder.position) {
+                                    // relative addresses ignore the current instructions code
+                                    pos++;
+                                }
+                                const codeLocation = this.getCodeLocation(pos);
+                                operand.value = posLabel[0].offset - codeLocation;
+                            } else {
+                                operand.value = posLabel[0].offset;
+                            }
+                            return operand;
                         default:
                             console.log(position, `Multiple label definitions found during 2 pass processing: ${label.label}`);
                             return operand;
@@ -56,11 +71,10 @@ class Format {
                 }
                 return operand;
             });
-            // replace binary output of code with fixed offset
-            const opcode = placeholder.opcode;
+
             if (opcode !== null) {
                 try {
-                    this.binaryOutput[placeholder.position] = opcode.getBytes(...fixedOperands);
+                    this.binaryOutput[placeholder.position] = opcode.getBytes(fixedOperands);
                 } catch (e) {
                     console.log(placeholder.position, `Error regenerating instruction: ${opcode.instruction.key} ${fixedOperands.join(", ")}`);
                 }
@@ -70,6 +84,12 @@ class Format {
 
     getCurrentCodeLocation () {
         return this.binaryOutput.map((bits) => bits.length).reduce((sum, bits) => sum + bits, 0) / 8;
+    }
+
+    getCodeLocation (instructionCount) {
+        return this.binaryOutput.filter((bits, i) => i < instructionCount)
+            .map((bits) => bits.length)
+            .reduce((sum, bits) => sum + bits, 0) / 8;
     }
 
     isValidDirective(directive) {

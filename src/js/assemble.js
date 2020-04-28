@@ -62,11 +62,8 @@ export function assemble(statements) {
                     // swap out any labels for PlaceholderImmediates so we can switch in the value later
                     for (let i = 0; i < operands.length; i++) {
                         const operand = operands[i];
-                        if (operand instanceof Label) {
-                            const immediate = new PlaceholderImmediate(operand);
-                            immediate.bits = 16;
+                        if (operand instanceof PlaceholderImmediate) {
                             format.addPlaceholder(instruction, operands);
-                            operands[i] = immediate;
                             placeholder = true;
                         }
                     }
@@ -115,7 +112,7 @@ export function assemble(statements) {
                             addError(position, `Error creating output for instruction ${e.toString()}`);
                         }
                         if (!matched) {
-                            addError(position, `Unable to match instruction (${instruction.key}) and operands (${operands.map((o) => o.key).join(", ")}) to opcode.`);
+                            addError(position, `Unable to match instruction (${instruction.key}) and operands (${operands.map((o) => o.toString()).join(", ")}) to opcode.`);
                         }
                     }
                     break;

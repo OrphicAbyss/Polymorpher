@@ -217,7 +217,7 @@ class MemParam extends Parameter {
     }
 
     match (op) {
-        return (op instanceof Memory) && op.isDisplacmentOnly();
+        return (op instanceof Memory) && op.isDisplacementOnly();
     }
 
     asOpString () {
@@ -242,7 +242,7 @@ class MemParam extends Parameter {
     }
 }
 
-class RelParam extends Parameter {
+export class RelParam extends Parameter {
     constructor (bits) {
         super(bits);
     }
@@ -391,6 +391,73 @@ class OpCodeModRM extends OpCode {
             this.operands.filter(op => op instanceof ImmParam).map(operand => operand.asOpString()).join(", ");
     }
 
+    getOutput (mem, regOrSub) {
+        let output = "";
+
+        if (mem.isDisplacementOnly()) {
+            output += "00" + regOrSub + "110";
+            output += mem.getBytes(16);
+        } else {
+            if (!mem.hasDisplacement()) {
+                output += "00";
+            } else if (mem.displacment.bits === 8) {
+                output += "01";
+            } else if (mem.displacment.bits === 16) {
+                output += "10";
+            } else {
+                throw new Error("Memory address displacement should be 8 or 16 bits, was " + mem.displacment.bits);
+            }
+
+            output += regOrSub;
+
+            if (mem.hasRegBase() && mem.hasRegIndex()) {
+                output += "0";
+                if (mem.regBase.key === "BX") {
+                    output += "0";
+                } else if (mem.regBase.key === "BP") {
+                    output += "1";
+                } else {
+                    throw new Error("Invalid base register in memory address, was " + mem.regBase.key);
+                }
+
+                if (mem.regIndex.key === "SI") {
+                    output += "0";
+                } else if (mem.regIndex.key === "DI") {
+                    output += "1";
+                } else {
+                    throw new Error("Invalid index register in memory address, was " + mem.regIndex.key);
+                }
+            } else if (mem.hasRegIndex()) {
+                output += "10";
+                if (mem.regIndex.key === "SI") {
+                    output += "0";
+                } else if (mem.regIndex.key === "DI") {
+                    output += "1";
+                } else {
+                    throw new Error("Invalid index register in memory address, was " + mem.regIndex.key);
+                }
+            } else if (mem.hasRegBase()) {
+                output += "11";
+                if (mem.regBase.key === "BP") {
+                    output += "0";
+                } else if (mem.regBase.key === "BX") {
+                    output += "1";
+                } else {
+                    throw new Error("Invalid base register in memory address, was " + mem.regBase.key);
+                }
+            }
+
+            if (mem.hasDisplacement()) {
+                if (mem.displacment.bits === 8) {
+                    output += mem.getBytes(8);
+                } else if (mem.displacment.bits === 16) {
+                    output += mem.getBytes(16);
+                }
+            }
+        }
+
+        return output;
+    }
 
     getBytes (operands) {
         let output = this.hexToBinary(this.code, true);
@@ -402,124 +469,16 @@ class OpCodeModRM extends OpCode {
         if (this.operands.length === 1 || immIndex !== -1) {
             // most likely we will have a subcode and it is encoded in the normal first reg position
             if (operands[regMemIndex] instanceof Register) {
-                output += "11" + this.hexToBinary(this.subCode).substring(2, 4) + operands[regMemIndex].getBytes();
+                output += "11" + this.hexToBinary(this.subCode, true).substring(2, 5) + operands[regMemIndex].getBytes();
             } else if (operands[regMemIndex] instanceof Memory) {
                 const mem = operands[regMemIndex];
-
-                const token1 = mem.tokens[0];
-                const token2 = mem.tokens[1];
-                const token3 = mem.tokens[2];
-
-                switch (mem.tokens.length) {
-                    case 1:
-
-                        if (token1 instanceof Register) {
-                            let bits = "";
-                            if (token1.key === "SI") {
-                                bits = "100";
-                            } else if (token1.key === "DI") {
-                                bits = "101";
-                            } else if (token1.key === "BX") {
-                                bits = "111";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-                            output += "00" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                        } else if (token1 instanceof Immediate) {
-                            // append displacement value
-                            output += "00" + this.hexToBinary(this.subCode).substring(2, 4) + "110";
-                            output += token1.getBytes(16);
-                        }
-                        break;
-                    case 2:
-
-                        if (token1 instanceof Register && token2 instanceof Immediate) {
-                            let bits = "";
-                            if (token1.key === "SI") {
-                                bits = "100";
-                            } else if (token1.key === "DI") {
-                                bits = "101";
-                            } else if (token1.key === "BP") {
-                                bits = "110";
-                            } else if (token1.key === "BX") {
-                                bits = "111";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-                            if (token2.bits === 8) {
-                                output += "01" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                                output += token2.getBytes(8);
-                            } else if (token2.bits === 16) {
-                                output += "10" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                                output += token2.getBytes(16);
-                            }
-                        } else if (token1 instanceof Register && token2 instanceof Register) {
-                            let bits = "0";
-                            if (token1.key === "BX") {
-                                bits += "0";
-                            } else if (token1.key === "BP") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-
-                            if (token2.key === "SI") {
-                                bits += "0";
-                            } else if (token2.key === "DI") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token2.key);
-                                break;
-                            }
-
-                            output += "00" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                        }
-                        break;
-                    case 3:
-                        if (token1 instanceof Register && token2 instanceof Register && token3 instanceof Immediate) {
-                            let bits = "1";
-                            if (token1.key === "BX") {
-                                bits += "0";
-                            } else if (token1.key === "BP") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-
-                            if (token2.key === "SI") {
-                                bits += "0";
-                            } else if (token2.key === "DI") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token2.key);
-                                break;
-                            }
-
-                            if (token3.bits === 8) {
-                                output += "01" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                                output += token3.getBytes(8);
-                            } else if (token3.bits === 16) {
-                                output += "10" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                                output += token3.getBytes(16);
-                            }
-                            output += "00" + this.hexToBinary(this.subCode).substring(2, 4) + bits;
-                        } else {
-                            console.log("Invalid memory addressing format:", token1, token2, token3);
-                        }
-                        break;
-                    default:
-                        console.log("Incorrect memory format", mem);
-                }
+                output += this.getOutput(mem, this.hexToBinary(this.subCode, true).substring(2, 5));
             } else {
                 console.log("Expected reg or memory");
             }
             // append immediate value if it exists
             if (immIndex !== -1) {
-                operands[immIndex].getBytes(this.operands[immIndex].bits);
+                output += operands[immIndex].getBytes(this.operands[immIndex].bits);
             }
         } else {
             // if the memory/register operand is just a register, use reg/reg encoding
@@ -527,115 +486,9 @@ class OpCodeModRM extends OpCode {
                 output += "11" + operands[regIndex].getBytes() + operands[regMemIndex].getBytes();
             } else if (operands[regMemIndex] instanceof Memory) {
                 const mem = operands[regMemIndex];
+                const regBits = operands[regIndex].getBytes();
 
-                const token1 = mem.tokens[0];
-                const token2 = mem.tokens[1];
-                const token3 = mem.tokens[2];
-
-                switch (mem.tokens.length) {
-                    case 1:
-
-                        if (token1 instanceof Register) {
-                            let bits = "";
-                            if (token1.key === "SI") {
-                                bits = "100";
-                            } else if (token1.key === "DI") {
-                                bits = "101";
-                            } else if (token1.key === "BX") {
-                                bits = "111";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-                            output += "00" + operands[regIndex].getBytes() + bits;
-                        } else if (token1 instanceof Immediate) {
-                            // append displacement value
-                            output += "00" + operands[regIndex].getBytes() + "110";
-                            output += token1.getBytes(16);
-                        }
-                        break;
-                    case 2:
-
-                        if (token1 instanceof Register && token2 instanceof Immediate) {
-                            let bits = "";
-                            if (token1.key === "SI") {
-                                bits = "100";
-                            } else if (token1.key === "DI") {
-                                bits = "101";
-                            } else if (token1.key === "BP") {
-                                bits = "110";
-                            } else if (token1.key === "BX") {
-                                bits = "111";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-                            if (token2.bits === 8) {
-                                output += "01" + operands[regIndex].getBytes() + bits;
-                                output += token2.getBytes(8);
-                            } else if (token2.bits === 16) {
-                                output += "10" + operands[regIndex].getBytes() + bits;
-                                output += token2.getBytes(16);
-                            }
-                        } else if (token1 instanceof Register && token2 instanceof Register) {
-                            let bits = "0";
-                            if (token1.key === "BX") {
-                                bits += "0";
-                            } else if (token1.key === "BP") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-
-                            if (token2.key === "SI") {
-                                bits += "0";
-                            } else if (token2.key === "DI") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token2.key);
-                                break;
-                            }
-
-                            output += "00" + operands[regIndex].getBytes() + bits;
-                        }
-                        break;
-                    case 3:
-                        if (token1 instanceof Register && token2 instanceof Register && token3 instanceof Immediate) {
-                            let bits = "1";
-                            if (token1.key === "BX") {
-                                bits += "0";
-                            } else if (token1.key === "BP") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token1.key);
-                                break;
-                            }
-
-                            if (token2.key === "SI") {
-                                bits += "0";
-                            } else if (token2.key === "DI") {
-                                bits += "1";
-                            } else {
-                                console.log("Invalid register in memory addressing:", token2.key);
-                                break;
-                            }
-
-                            if (token3.bits === 8) {
-                                output += "01" + operands[regIndex].getBytes() + bits;
-                                output += token3.getBytes(8);
-                            } else if (token3.bits === 16) {
-                                output += "10" + operands[regIndex].getBytes() + bits;
-                                output += token3.getBytes(16);
-                            }
-                            output += "00" + operands[regIndex].getBytes() + bits;
-                        } else {
-                            console.log("Invalid memory addressing format:", token1, token2, token3);
-                        }
-                        break;
-                    default:
-                        console.log("Incorrect memory format", mem);
-                }
+                output += this.getOutput(mem, regBits);
             } else {
                 console.log("Expected reg or memory");
             }
@@ -767,7 +620,12 @@ export const instructions = [
         new OpCodeModRM("F6", "28", [new RegMemParam(8, "G")]),
         new OpCodeModRM("F7", "28", [new RegMemParam(16, "G")])
     ], "arithmetic"),
-    new Instruction("IN", "Input from port"),
+    new Instruction("IN", "Input from port", [
+        new OpCode("E4", null, [new FixedRegParam("AL"), new ImmParam(8)]),
+        new OpCode("E5", null, [new FixedRegParam("AX"), new ImmParam(8)]),
+        new OpCode("EC", null, [new FixedRegParam("AL"), new FixedRegParam("DX")]),
+        new OpCode("ED", null, [new FixedRegParam("AX"), new FixedRegParam("DX")])
+    ], "load/store/move"),
     new Instruction("INC", "Increment by 1", [
         new OpCode("40", null, [new FixedRegParam("AX")]),
         new OpCode("41", null, [new FixedRegParam("CX")]),
@@ -878,9 +736,9 @@ export const instructions = [
         new OpCode("E3", null, [new RelParam(8)])
     ], "jumps/calls"),
     new Instruction("JMP", "Jump", [
+        new OpCode("EB", null, [new RelParam(8)]),
         new OpCode("E9", null, [new RelParam(16)]),
         new OpCode("EA", null, [new PtrParam(16), new PtrParam(16)]),
-        new OpCode("EB", null, [new RelParam(8)]),
         new OpCodeModRM("FF", "20", [new RegMemParam(16, "G")])
         //new OpCodeModRM("FF", "28", [new RegMemParam(32, "G")]) // Memory 32
     ], "jumps/calls"),
@@ -942,7 +800,7 @@ export const instructions = [
         new OpCodeModRM("8C", null, [new RegMemParam(16, "G"), new RegParam(16, "S")]),
         new OpCodeModRM("8E", null, [new RegParam(16, "S"), new RegMemParam(16, "G")]),
         new OpCodeModRM("C6", "00", [new RegMemParam(8, "G"), new ImmParam(8)]),
-        new OpCodeModRM("C7", "00", [new RegMemParam(8, "G"), new ImmParam(8)])
+        new OpCodeModRM("C7", "00", [new RegMemParam(16, "G"), new ImmParam(16)])
     ], "load/store/move"),
     new Instruction("MOVSB", "Move byte from string to string", [
         new OpCode("A4")
@@ -991,7 +849,12 @@ export const instructions = [
         new OpCodeModRM("83", "08", [new RegMemParam(16, "G"), new ImmParam(8)]),
         new OpCodeModRM("81", "08", [new RegMemParam(16, "G"), new ImmParam(16)])
     ], "logic"),
-    new Instruction("OUT", "Output to port"),
+    new Instruction("OUT", "Output to port", [
+        new OpCode("E6", null, [new ImmParam(8), new FixedRegParam("AL")]),
+        new OpCode("E7", null, [new ImmParam(16), new FixedRegParam("AX")]),
+        new OpCode("EE", null, [new FixedRegParam("DX"), new FixedRegParam("AL")]),
+        new OpCode("EF", null, [new FixedRegParam("DX"), new FixedRegParam("AX")])
+    ], "load/store/move"),
     new Instruction("POP", "Pop data from stack", [
         new OpCode("58", null, [new FixedRegParam("AX")]),
         new OpCode("59", null, [new FixedRegParam("CX")]),

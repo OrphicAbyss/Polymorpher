@@ -15,6 +15,7 @@ export class Memory {
 
     addToken (token) {
         this.tokens.push(token);
+
         if (token instanceof Register) {
             if (token.key === "BX" || token.key === "BP") {
                 if (this.regBase) {
@@ -28,6 +29,11 @@ export class Memory {
                 this.regIndex = token;
             }
         } else if (token instanceof Immediate) {
+            if (token.value === 0) {
+                // ignore 0 displacement values
+                return;
+            }
+
             if (this.displacment) {
                 throw new Error(`Memory Operand: Displacement value already set ${this.displacment.value}, can't take two displacment values ${token.value}`);
             }
@@ -35,8 +41,28 @@ export class Memory {
         }
     }
 
-    isDisplacmentOnly () {
+    isDisplacementOnly () {
         return !this.regBase && !this.regIndex && !!this.displacment;
+    }
+
+    isRegIndexOnly () {
+        return !this.regBase && !!this.regIndex && !this.displacment;
+    }
+
+    isRegBaseOnly () {
+        return !!this.regBase && !this.regIndex && !this.displacment;
+    }
+
+    hasRegBase () {
+        return !!this.regBase;
+    }
+
+    hasRegIndex () {
+        return !!this.regIndex;
+    }
+
+    hasDisplacement () {
+        return !!this.displacment;
     }
 
     getBytes (bits) {
@@ -49,6 +75,6 @@ export class Memory {
     }
 
     toString () {
-        return `Memory (${this.tokens})`;
+        return `Memory (${this.tokens.map(tok => tok.toString()).join(", ")})`;
     }
 }
