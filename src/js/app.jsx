@@ -1,17 +1,40 @@
 "use strict";
 
 import React from "react";
-import {Grommet, Header, Tabs, Tab, Text, Box, Heading, Footer, Button} from "grommet";
-import {InstructionGrid, InstructionSubGrid, InstructionTable} from "./instruction_table";
-import {V86Terminal} from "./v86";
+import {
+    Grommet,
+    Anchor,
+    Box,
+    Button,
+    Footer,
+    Grid,
+    Header,
+    Heading,
+    Layer,
+    List,
+    Nav,
+    Tabs,
+    Tab,
+    Text,
+    TextArea
+} from "grommet";
+import {Code, Cube, Folder, FormClose, List as ListIcon, Save, Table} from "grommet-icons";
+
+// import {V86Terminal} from "./v86";
 import {schemeCategory10} from "d3-scale-chromatic";
 import {scanCode} from "./scanner";
 import {tokenise} from "./tokeniser";
 import {parse} from "./parser";
 import {assemble} from "./assemble";
-import AceEditor from "react-ace";
-import "ace-builds/src-noconflict/ext-beautify";
-import "ace-builds/src-noconflict/mode-assembly_x86";
+import {FS} from "./file_store";
+
+import {
+    InstructionGrid,
+    InstructionSubGrid,
+    InstructionTable
+} from "./components/instruction_table";
+import {Editor} from "./components/editor";
+import {Files} from "./components/files";
 
 const colourCodes = {};
 
@@ -24,63 +47,25 @@ export function getColor (type) {
     return schemeCategory10[code];
 }
 
-const exampleDosProgram = `; Example DOS program which compiles as a .com file
-; Prints 'Hello, world!', waits for a key press, then exits 
-    org    100h       
-
-    mov ah,09
-    mov dx,msg
-    int 21h
-    mov ah,08
-    int 21h
-    int 20h
-    msg db "hello world!$"
-`;
-
-const exampleDosMZProgram = `format MZ
-
-entry main:start            ; program entry point
-stack 100h                ; stack size
-
-segment main                ; main program segment
-start:
-mov    ax,text
-mov    ds,ax
-mov    dx,hello
-call    extra:write_text
-mov    ax,4C00h
-int    21h
-segment text
-hello db 'Hello world!',24h
-segment extra
-write_text:
-mov    ah,9
-int    21h
-retf`;
-
-const exampleDosMZ2Program = `format MZ                       ;Исполняемый файл DOS EXE (MZ EXE)
-entry code_seg:start            ;Точка входа в программу
-stack 200h                      ;Размер стека
-;--------------------------------------------------------------------
-    segment data_seg                ;Cегмент данных
-hello db 'Hello, asmworld!$'    ;Строка
-;--------------------------------------------------------------------
-    segment code_seg                ;Сегмент кода
-start:                          ;Точка входа в программу
-mov ax,data_seg             ;Инициализация регистра DS
-mov ds,ax
-mov ah,09h
-mov dx,hello                ;Вывод строки
-int 21h
-mov ax,4C00h
-int 21h                     ;Завершение программы
-`;
-
 export default function App () {
-    const [code, setCode] = React.useState(exampleDosMZProgram);
+    const [insLayer, showInsLayer] = React.useState(false);
+    const [opcodeLayer, showOpcodeLayer] = React.useState(false);
+
+    const [fs] = React.useState(FS());
+    const [file, setFile] = React.useState(null);
+    const [code, setCode] = React.useState("");
+    const [changed, setChanged] = React.useState(false);
     const codeUpdate = (text) => {
         setCode(text);
+        setChanged(true);
+        fs.setFile(file, text)
+            .then(() => setChanged(false));
     };
+    const loadFile = (filename, text) => {
+        // load new file
+        setFile(filename);
+        setCode(text);
+    }
 
     const timeStart = new Date();
 
@@ -102,80 +87,133 @@ export default function App () {
 
     const binary = assembled.binaryOutput.join("");
     const buffer = [];
-    for (let i=0; i<binary.length; i+=8) {
+    for (let i = 0; i < binary.length; i += 8) {
         buffer.push(parseInt(binary.substr(i, 8), 2));
     }
     const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
     const url = URL.createObjectURL(blob);
 
     return (
-        <Grommet>
-            <Header background="dark-1">
-                <Box direction="row" align="center" gap="small">
-                    <Heading color="white" size="small">
-                        WebAssembler
-                    </Heading>
-                    <div>An online x86 assembler</div>
-                </Box>
-            </Header>
-
-            <Tabs>
-                <Tab title="Instructions">
-                    <Box pad="medium">
-                        <Heading>Instruction List and Details</Heading>
+        <Grommet full>
+            {insLayer && (
+                <Layer
+                    position="right"
+                    full="vertical"
+                    modal
+                    onEsc={() => showInsLayer(false)}
+                    onClickOutside={() => showInsLayer(false)}
+                >
+                    <Button label="close" icon={<FormClose/>} onClick={() => showInsLayer(false)}/>
+                    <Heading>8086 Instruction List</Heading>
+                    <Box overflow="auto">
                         <InstructionTable/>
                     </Box>
-                </Tab>
-                <Tab title="Op Codes">
-                    <Box><Heading>Op Code Table</Heading></Box>
-                    <Box overflow="scroll"><InstructionGrid/></Box>
-                    <Box><Heading>Sub Op Code Table</Heading></Box>
-                    <Box><InstructionSubGrid/></Box>
-                </Tab>
-                <Tab title="Code">
-                    <Box pad="medium">
-                        <AceEditor theme="tomorrow" mode="assembly_x86" value={code} onChange={codeUpdate} name="ace" width="100%" fontSize={16}/>
-                    </Box>
-                </Tab>
-                {/*<Tab title="Lexemes">*/}
-                {/*    <Box pad="medium">*/}
-                {/*        {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
-                {/*    </Box>*/}
-                {/*</Tab>*/}
-                <Tab title="Tokens">
-                    <Box pad="medium">
-                        {tokens.map((token, i) => (<div key={i} style={{color: getColor(token.type)}}>{token.toString() + " " + token.type}</div>))}
-                    </Box>
-                </Tab>
-                <Tab title="Parsed">
-                    <Box pad="medium">
-                        {parsed.map((statement, i) => (<div key={i} style={{color: getColor(statement.getType())}}>{statement.toString() + " " + statement.getType()}</div>))}
-                    </Box>
-                </Tab>
-                <Tab title="Binary">
-                    <Box pad="medium">
-                        {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                        {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
-                        <Button href={url} label="Download Machine Code" download="code.com"/>
-                    </Box>
-                </Tab>
-                <Tab title="Formatted Binary">
-                    <Box pad="medium">
-                        {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                        {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
-                        <Button href={url} label="Download Machine Code" download="code.com"/>
-                    </Box>
-                </Tab>
-                {/*<Tab title="x86 Virtual Machine">*/}
-                {/*    <Box pad="medium">*/}
-                {/*        <V86Terminal/>*/}
-                {/*    </Box>*/}
-                {/*</Tab>*/}
-            </Tabs>
+                </Layer>
+            )}
 
-            <Footer background="dark-1">
+            {opcodeLayer && (
+                <Layer
+                    position="right"
+                    full="vertical"
+                    modal
+                    onEsc={() => showOpcodeLayer(false)}
+                    onClickOutside={() => showOpcodeLayer(false)}
+                >
+                    <Button label="close" icon={<FormClose/>} onClick={() => showOpcodeLayer(false)}/>
+                    <Box overflow="auto">
+                        <Box><Heading>8086 Op Code Table</Heading></Box>
+                        <Box overflow="scroll"><InstructionGrid/></Box>
+                        <Box><Heading>Sub Op Code Table</Heading></Box>
+                        <Box><InstructionSubGrid/></Box>
+                    </Box>
+                </Layer>
+            )}
 
-            </Footer>
+
+            <Grid
+                rows={["auto", "flex"]}
+                columns={["auto", "flex"]}
+                fill
+                areas={[
+                    ["header", "header"],
+                    ["sidebar", "main"],
+                    ["footer", "footer"]
+                ]}
+            >
+                <Box gridArea="header">
+                    <Header background="dark-1" gap="medium">
+                        <Box direction="row" align="center" gap="small">
+                            <Cube/>
+                            <Heading color="white" size="small">
+                                WebAssembler
+                            </Heading>
+                            <Text>An online x86 assembler</Text>
+                        </Box>
+                        <Nav direction="row">
+                            {/*<Anchor label="Code" icon={<Code/>}/>*/}
+                            <Anchor label="Instructions" icon={<ListIcon/>} onClick={() => showInsLayer(true)}/>
+                            <Anchor label="Op Codes" icon={<Table/>} onClick={() => showOpcodeLayer(true)}/>
+                        </Nav>
+                    </Header>
+                </Box>
+                <Box gridArea="sidebar" background="light-1">
+                    <Files fs={fs} loadFile={loadFile}/>
+                </Box>
+                <Box gridArea="main">
+                    <Box direction="row">
+                        <Text>{file}</Text>
+                        {changed && <Save/>}
+                    </Box>
+                    <Tabs>
+                        <Tab title="Code">
+                            <Box pad="small">
+                                <Editor value={code} onChange={codeUpdate}/>
+                            </Box>
+                        </Tab>
+                        {/*<Tab title="Lexemes">*/}
+                        {/*    <Box pad="medium">*/}
+                        {/*        {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
+                        {/*    </Box>*/}
+                        {/*</Tab>*/}
+                        <Tab title="Tokens">
+                            <Box pad="medium">
+                                {tokens.map((token, i) => (<div key={i}
+                                                                style={{color: getColor(token.type)}}>{token.toString() + " " + token.type}</div>))}
+                            </Box>
+                        </Tab>
+                        <Tab title="Parsed">
+                            <Box pad="medium">
+                                {parsed.map((statement, i) => (<div key={i}
+                                                                    style={{color: getColor(statement.getType())}}>{statement.toString() + " " + statement.getType()}</div>))}
+                            </Box>
+                        </Tab>
+                        <Tab title="Binary">
+                            <Box pad="medium">
+                                {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                                {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
+                                <Button href={url} label="Download Machine Code" download="code.com"/>
+                            </Box>
+                        </Tab>
+                        <Tab title="Formatted Binary">
+                            <Box pad="medium">
+                                {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                                {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
+                                <Button href={url} label="Download Machine Code" download="code.com"/>
+                            </Box>
+                        </Tab>
+                        {/*<Tab title="x86 Virtual Machine">*/}
+                        {/*    <Box pad="medium">*/}
+                        {/*        <V86Terminal/>*/}
+                        {/*    </Box>*/}
+                        {/*</Tab>*/}
+                    </Tabs>
+                </Box>
+                <Box gridArea="footer">
+                    <Footer background="dark-1">
+                        Status: ...
+                    </Footer>
+                </Box>
+            </Grid>
         </Grommet>
     );
 }

@@ -3,7 +3,7 @@
 import {schemeTableau10} from "d3-scale-chromatic";
 import React from "react";
 import {Box, DataTable, Text} from "grommet";
-import {instructions} from "./instruction";
+import {instructions} from "../instruction";
 
 export function InstructionTable (props) {
     return (
