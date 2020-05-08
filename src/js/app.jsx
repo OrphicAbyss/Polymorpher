@@ -1,24 +1,26 @@
 "use strict";
 
 import React from "react";
-import {
-    Grommet,
-    Anchor,
-    Box,
-    Button,
-    Footer,
-    Grid,
-    Header,
-    Heading,
-    Layer,
-    List,
-    Nav,
-    Tabs,
-    Tab,
-    Text,
-    TextArea
-} from "grommet";
-import {Code, Cube, Folder, FormClose, List as ListIcon, Save, Table} from "grommet-icons";
+import {Grommet} from "grommet/components/Grommet";
+import {Anchor} from "grommet/components/Anchor";
+import {Box} from "grommet/components/Box";
+import {Button} from "grommet/components/Button";
+import {Footer} from "grommet/components/Footer";
+import {Grid} from "grommet/components/Grid";
+import {Header} from "grommet/components/Header";
+import {Heading} from "grommet/components/Heading";
+import {Layer} from "grommet/components/Layer";
+import {List} from "grommet/components/List";
+import {Nav} from "grommet/components/Nav";
+import {Tabs} from "grommet/components/Tabs";
+import {Tab} from "grommet/components/Tab";
+import {Text} from "grommet/components/Text";
+import {TextArea} from "grommet/components/TextArea";
+import {Cube} from "grommet-icons/icons/Cube";
+import {FormClose} from "grommet-icons/icons/FormClose";
+import {List as ListIcon} from "grommet-icons/icons/List";
+import {Save} from "grommet-icons/icons/Save";
+import {Table} from "grommet-icons/icons/Table";
 
 // import {V86Terminal} from "./v86";
 import {schemeCategory10} from "d3-scale-chromatic";
@@ -157,16 +159,12 @@ export default function App () {
                     </Header>
                 </Box>
                 <Box gridArea="sidebar" background="light-1">
-                    <Files fs={fs} loadFile={loadFile}/>
+                    <Files fs={fs} loadFile={loadFile} openFile={file} fileChanged={changed}/>
                 </Box>
-                <Box gridArea="main">
-                    <Box direction="row">
-                        <Text>{file}</Text>
-                        {changed && <Save/>}
-                    </Box>
-                    <Tabs>
+                <Box gridArea="main" overflow="auto" direction="column">
+                    <Tabs flex>
                         <Tab title="Code">
-                            <Box pad="small">
+                            <Box pad="small" fill>
                                 <Editor value={code} onChange={codeUpdate}/>
                             </Box>
                         </Tab>
@@ -177,20 +175,22 @@ export default function App () {
                         {/*</Tab>*/}
                         <Tab title="Tokens">
                             <Box pad="medium">
-                                {tokens.map((token, i) => (<div key={i}
-                                                                style={{color: getColor(token.type)}}>{token.toString() + " " + token.type}</div>))}
+                                {tokens.map((token, i) => (
+                                    <div key={i} style={{color: getColor(token.type)}}>{i}: {token.toString() + " " + token.type}</div>
+                                ))}
                             </Box>
                         </Tab>
                         <Tab title="Parsed">
                             <Box pad="medium">
-                                {parsed.map((statement, i) => (<div key={i}
-                                                                    style={{color: getColor(statement.getType())}}>{statement.toString() + " " + statement.getType()}</div>))}
+                                {parsed.map((statement, i) => (
+                                    <div key={i} style={{color: getColor(statement.getType())}}>{i}: {statement.toString() + " " + statement.getType()}</div>
+                                ))}
                             </Box>
                         </Tab>
                         <Tab title="Binary">
                             <Box pad="medium">
                                 {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                                {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{binary}</div>))}
+                                {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{i}: {binary}</div>))}
                                 <Button href={url} label="Download Machine Code" download="code.com"/>
                             </Box>
                         </Tab>

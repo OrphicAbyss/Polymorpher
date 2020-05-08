@@ -55,7 +55,7 @@ export class DefineDataDirective extends Directive {
                 return token.toCode();
             }
             if (token instanceof Immediate) {
-                return token.getBytes(token.bits);
+                return token.getBytes(this.bits);
             }
         }).join("");
     }

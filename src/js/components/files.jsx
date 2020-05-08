@@ -1,8 +1,23 @@
 "use strict";
 
 import React from "react";
-import {Box, Button, DropButton, Form, FormField, Heading, Layer, List, Text, TextInput} from "grommet";
-import {Add, Document, MoreVertical, Save, Trash} from "grommet-icons";
+import {Box} from "grommet/components/Box";
+import {Button} from "grommet/components/Button";
+import {DropButton} from "grommet/components/DropButton";
+import {Form} from "grommet/components/Form";
+import {FormField} from "grommet/components/FormField";
+import {Heading} from "grommet/components/Heading";
+import {Layer} from "grommet/components/Layer";
+import {List} from "grommet/components/List";
+import {Text} from "grommet/components/Text";
+import {TextInput} from "grommet/components/TextInput";
+import {Add} from "grommet-icons/icons/Add";
+import {Document} from "grommet-icons/icons/Document";
+import {DocumentUpload} from "grommet-icons/icons/DocumentUpload";
+import {DocumentVerified} from "grommet-icons/icons/DocumentVerified";
+import {MoreVertical} from "grommet-icons/icons/MoreVertical";
+import {Save} from "grommet-icons/icons/Save";
+import {Trash} from "grommet-icons/icons/Trash";
 
 function CreateDialog (props) {
     const {isOpen, closeDialog} = props;
@@ -87,6 +102,8 @@ function DeleteDialog (props) {
 export function Files (props) {
     const fs = props.fs;
     const setCode = props.loadFile;
+    const openFile = props.openFile;
+    const fileChanged = props.fileChanged;
 
     const [files, setFiles] = React.useState([]);
     const [delFile, setDelFile] = React.useState(null);
@@ -164,7 +181,7 @@ export function Files (props) {
                 {(datum, index) => (
                     <Box key={index} direction="row-responsive">
                         <Box flex direction="row-responsive" onClick={() => loadFile(datum)}>
-                            <Document/>
+                            {datum === openFile ? (fileChanged ? <DocumentUpload/> : <DocumentVerified/>) : <Document/>}
                             <Text>{datum}</Text>
                         </Box>
                         <DropButton dropContent={<Box pad="small"><Trash onClick={() => openDeleteDialog(datum)}/></Box>}>

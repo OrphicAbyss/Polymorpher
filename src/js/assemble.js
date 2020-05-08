@@ -46,6 +46,13 @@ export function assemble(statements) {
                         } else {
                             // check if directive is supported by this type of format
                             if (format.isValidDirective(directive)) {
+                                for (let i = 0; i < parameters.length; i++) {
+                                    const parameter = parameters[i];
+                                    if (parameter instanceof PlaceholderImmediate) {
+                                        format.addPlaceholder(directive, parameters);
+                                    }
+                                }
+
                                 format.handleDirective(directive, parameters);
                             } else {
                                 addError(position, `${directive.key} is not supported in format ${format.name}`);

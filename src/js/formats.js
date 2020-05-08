@@ -3,13 +3,13 @@
 import {StrToken} from "./tokeniser";
 import {Immediate, PlaceholderImmediate} from "./immediate";
 import {DefineDataDirective, ReserveDataDirective} from "./directive";
-import {RelParam} from "./instruction";
+import {Instruction, RelParam} from "./instruction";
 
 class Format {
     constructor (name, addErrorFn) {
         this.name = name;
         this.addError = addErrorFn;
-        this.validDirectives = ["DB"];
+        this.validDirectives = ["DB", "DW"];
         this.labels = [];
         this.placeholders = [];
         this.binaryOutput = [];
@@ -42,7 +42,7 @@ class Format {
             // replace binary output of code with fixed offset
             const opcode = placeholder.opcode;
 
-            const fixedOperands = placeholder.operands.map((operand, i) => {
+            let fixedOperands = placeholder.operands.map((operand, i) => {
                 if (operand instanceof PlaceholderImmediate) {
                     const position = placeholder.position;
                     const label = operand.label;
@@ -52,7 +52,7 @@ class Format {
                             console.log(position, `No label definition found during 2 pass processing: ${label.label}`);
                             return operand;
                         case 1:
-                            if (opcode.operands[i] instanceof RelParam) {
+                            if (opcode && opcode.operands[i] instanceof RelParam) {
                                 let pos = placeholder.position;
                                 if (posLabel[0].pos > placeholder.position) {
                                     // relative addresses ignore the current instructions code
@@ -78,6 +78,8 @@ class Format {
                 } catch (e) {
                     console.log(placeholder.position, `Error regenerating instruction: ${opcode.instruction.key} ${fixedOperands.join(", ")}`);
                 }
+            } else {
+                this.binaryOutput[placeholder.position] = placeholder.instruction.toCode(...fixedOperands);
             }
         });
     }
@@ -87,9 +89,15 @@ class Format {
     }
 
     getCodeLocation (instructionCount) {
-        return this.binaryOutput.filter((bits, i) => i < instructionCount)
+        const loc = this.binaryOutput.filter((bits, i) => i < instructionCount)
             .map((bits) => bits.length)
             .reduce((sum, bits) => sum + bits, 0) / 8;
+
+        if (loc.toString().indexOf(".") !== -1) {
+            console.log(`Locations should always be 8 bit aligned: ${loc}`);
+        }
+
+        return loc;
     }
 
     isValidDirective(directive) {

@@ -99,7 +99,7 @@ class ImmParam extends Parameter {
     }
 }
 
-class FixedImmParam extends Parameter {
+class FixedImmParam extends ImmParam {
     constructor (val) {
         super(0);
 
@@ -461,12 +461,12 @@ class OpCodeModRM extends OpCode {
 
     getBytes (operands) {
         let output = this.hexToBinary(this.code, true);
-
+        const fixedReg = this.operands.findIndex(op => op instanceof FixedRegParam);
         const immIndex = this.operands.findIndex(op => op instanceof ImmParam);
         const regMemIndex = this.operands.findIndex(op => op instanceof RegMemParam);
         const regIndex = regMemIndex === 0 ? 1 : 0;
         // If we have an immediate value or just one register
-        if (this.operands.length === 1 || immIndex !== -1) {
+        if (this.operands.length === 1 || immIndex !== -1 || fixedReg !== -1) {
             // most likely we will have a subcode and it is encoded in the normal first reg position
             if (operands[regMemIndex] instanceof Register) {
                 output += "11" + this.hexToBinary(this.subCode, true).substring(2, 5) + operands[regMemIndex].getBytes();
@@ -477,7 +477,7 @@ class OpCodeModRM extends OpCode {
                 console.log("Expected reg or memory");
             }
             // append immediate value if it exists
-            if (immIndex !== -1) {
+            if (immIndex !== -1 && !(this.operands[immIndex] instanceof FixedImmParam)) {
                 output += operands[immIndex].getBytes(this.operands[immIndex].bits);
             }
         } else {
@@ -549,7 +549,7 @@ export const instructions = [
     new Instruction("CALL", "Call procedure", [
         new OpCode("E8", null, [new RelParam(16)]),
         new OpCode("9A", null, [new PtrParam(16), new PtrParam(16)]),
-        new OpCodeModRM("FF", "10", [new RegMemParam(16)])
+        new OpCodeModRM("FF", "10", [new RegMemParam(16, "G")])
     ], "jumps/calls"),
     new Instruction("CBW", "Convert byte to word", [
         new OpCode("98")
@@ -654,11 +654,17 @@ export const instructions = [
     new Instruction("JNO", "Jump if Not Overflow", [
         new OpCode("71", null, [new RelParam(8)])
     ], "jumps/calls"),
+    new Instruction("JC", "Jump if Carry", [
+        new OpCode("72", null, [new RelParam(8)])
+    ], "jumps/calls"),
     new Instruction("JB", "Jump if Below", [
         new OpCode("72", null, [new RelParam(8)])
     ], "jumps/calls"),
     new Instruction("JNAE", "Jump if Not Above or Equal", [
         new OpCode("72", null, [new RelParam(8)])
+    ], "jumps/calls"),
+    new Instruction("JNC", "Jump if Not Carry", [
+        new OpCode("73", null, [new RelParam(8)])
     ], "jumps/calls"),
     new Instruction("JNB", "Jump if Not Below", [
         new OpCode("73", null, [new RelParam(8)])
@@ -892,16 +898,16 @@ export const instructions = [
         new OpCode("9C")
     ], "load/store/move"),
     new Instruction("RCL", "Rotate left (with carry)", [
-        new OpCodeModRM("D0", "10", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "10", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "10", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "10", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "10", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "10", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "10", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "10", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("RCR", "Rotate right (with carry)", [
-        new OpCodeModRM("D0", "18", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "18", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "18", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "18", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "18", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "18", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "18", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "18", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("RET", "Return from near procedure", [
         new OpCode("C2", null, [new ImmParam(16)]),
@@ -916,31 +922,31 @@ export const instructions = [
         new OpCode("CB")
     ], "jumps/calls"),
     new Instruction("ROL", "Rotate left", [
-        new OpCodeModRM("D0", "00", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "00", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "00", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "00", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "00", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "00", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "00", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "00", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("ROR", "Rotate right", [
-        new OpCodeModRM("D0", "08", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "08", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "08", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "08", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "08", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "08", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "08", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "08", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SAHF", "Store AH into flags", [
         new OpCode("9E")
     ], "load/store/move"),
     new Instruction("SAL", "Shift Arithmetically left (signed shift left)", [
-        new OpCodeModRM("D0", "30", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "30", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "30", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "30", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "30", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "30", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "30", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "30", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SAR", "Shift Arithmetically right (signed shift right)", [
-        new OpCodeModRM("D0", "38", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "38", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "38", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "38", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "38", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "38", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "38", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "38", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SBB", "Subtraction with borrow", [
         new OpCode("1C", null, [new FixedRegParam("AL"), new ImmParam(8)]),
@@ -960,16 +966,16 @@ export const instructions = [
         new OpCode("AF")
     ], "string"),
     new Instruction("SHL", "Shift left (unsigned shift left)", [
-        new OpCodeModRM("D0", "20", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "20", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "20", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "20", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "20", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "20", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "20", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "20", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("SHR", "Shift right (unsigned shift right)", [
-        new OpCodeModRM("D0", "28", [new RegMemParam(8), new FixedImmParam(1)]),
-        new OpCodeModRM("D1", "28", [new RegMemParam(16), new FixedImmParam(1)]),
-        new OpCodeModRM("D2", "28", [new RegMemParam(8), new FixedRegParam("CL")]),
-        new OpCodeModRM("D3", "28", [new RegMemParam(16), new FixedRegParam("CL")])
+        new OpCodeModRM("D0", "28", [new RegMemParam(8, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D1", "28", [new RegMemParam(16, "G"), new FixedImmParam(1)]),
+        new OpCodeModRM("D2", "28", [new RegMemParam(8, "G"), new FixedRegParam("CL")]),
+        new OpCodeModRM("D3", "28", [new RegMemParam(16, "G"), new FixedRegParam("CL")])
     ], "arithmetic"),
     new Instruction("STC", "Set carry flag", [
         new OpCode("F9")

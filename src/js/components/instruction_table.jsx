@@ -2,7 +2,9 @@
 
 import {schemeTableau10} from "d3-scale-chromatic";
 import React from "react";
-import {Box, DataTable, Text} from "grommet";
+import {Box} from "grommet/components/Box";
+import {DataTable} from "grommet/components/DataTable";
+import {Text} from "grommet/components/Text";
 import {instructions} from "../instruction";
 
 export function InstructionTable (props) {
@@ -131,16 +133,18 @@ function TabBox (props) {
 }
 
 export function InstructionGrid (props) {
-    const codes = ["", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"];
+    const codes = ["", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", ""];
 
     return (<table>
         <tbody>
-        {codes.map((v1, i) => (<tr key={i}>
-            {(i === 0) && codes.map((v2, j) => (j === 0) ? <td key={"x" + j}>{}</td> :
-                <td key={j}><TabBox>x{v2}</TabBox></td>)}
-            {(i !== 0) && codes.map((v2, j) => (j === 0) ? <td key={j}><TabBox>{v1}x</TabBox></td> :
-                <td key={j}><OpCodeCell code={v1 + v2}/></td>)}
-        </tr>))}
+        {codes.map((v1, i) => (v1 !== "" || i === 0) &&
+            <tr key={i}>
+                {(i === 0) && codes.map((v2, j) => (v2 === "") ? <td key={"x" + j}>{}</td> :
+                    <td key={j}><TabBox>x{v2}</TabBox></td>)}
+                {(i !== 0) && codes.map((v2, j) => (v2 === "") ? <td key={j}><TabBox>{v1}x</TabBox></td> :
+                    <td key={j}><OpCodeCell code={v1 + v2}/></td>)}
+            </tr>
+        )}
         </tbody>
     </table>);
 }
@@ -148,11 +152,17 @@ export function InstructionGrid (props) {
 export function InstructionSubGrid (props) {
     return (<table>
         <tbody>
-        <tr><td>{'\u00A0'}</td>{subGroupKeys.map((subCode, i) => <td key={i}><TabBox>{subCode}</TabBox></td>)}</tr>
-        {groupKeys.map((code, i) => <tr key={i}>
-            <td><TabBox>{code}</TabBox></td>
-            {subGroupKeys.map((subCode, j) => <td key={`s${j}`}><OpCodeWithSubCell code={code} subCode={subCode}/></td>)}
-        </tr>)}
+        <tr>
+            <td>{"\u00A0"}</td>
+            {subGroupKeys.map((subCode, i) => <td key={i}><TabBox>{subCode}</TabBox></td>)}
+        </tr>
+        {groupKeys.map((code, i) => (
+            <tr key={i}>
+                <td><TabBox>{code}</TabBox></td>
+                {subGroupKeys.map((subCode, j) => <td key={`s${j}`}><OpCodeWithSubCell code={code} subCode={subCode}/>
+                </td>)}
+            </tr>
+        ))}
         </tbody>
-    </table>)
+    </table>);
 }

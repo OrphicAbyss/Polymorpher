@@ -98,6 +98,9 @@ export function parse (tokens) {
 
             token = getNext();
             while (token instanceof Immediate || token instanceof StrToken || token instanceof Label) {
+                if (token instanceof Label) {
+                    token = new PlaceholderImmediate(token);
+                }
                 statement.addParameter(token);
                 token = getNext();
                 if (token instanceof Comma || token instanceof Colon) {

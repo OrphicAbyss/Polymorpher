@@ -1,7 +1,8 @@
 "use strict";
 
 import React from "react";
-import {Box, Button} from "grommet";
+import {Box} from "grommet/components/Box";
+import {Button} from "grommet/components/Button";
 
 export function V86Terminal (props) {
     const termRef = React.useRef("v86-ref");
