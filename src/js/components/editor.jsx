@@ -16,7 +16,7 @@ export function Editor (props) {
             mode="assembly_x86"
             value={value}
             onChange={onChange}
-            name="ace" width="100%" fontSize={16}
+            name="ace" width="100%" height="100%" fontSize={16}
         />
     )
 }

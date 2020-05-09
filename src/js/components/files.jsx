@@ -14,7 +14,7 @@ import {TextInput} from "grommet/components/TextInput";
 import {Add} from "grommet-icons/icons/Add";
 import {Document} from "grommet-icons/icons/Document";
 import {DocumentUpload} from "grommet-icons/icons/DocumentUpload";
-import {DocumentVerified} from "grommet-icons/icons/DocumentVerified";
+import {View} from "grommet-icons/icons/View";
 import {MoreVertical} from "grommet-icons/icons/MoreVertical";
 import {Save} from "grommet-icons/icons/Save";
 import {Trash} from "grommet-icons/icons/Trash";
@@ -181,7 +181,7 @@ export function Files (props) {
                 {(datum, index) => (
                     <Box key={index} direction="row-responsive">
                         <Box flex direction="row-responsive" onClick={() => loadFile(datum)}>
-                            {datum === openFile ? (fileChanged ? <DocumentUpload/> : <DocumentVerified/>) : <Document/>}
+                            {datum === openFile ? (fileChanged ? <DocumentUpload/> : <View/>) : <Document/>}
                             <Text>{datum}</Text>
                         </Box>
                         <DropButton dropContent={<Box pad="small"><Trash onClick={() => openDeleteDialog(datum)}/></Box>}>
