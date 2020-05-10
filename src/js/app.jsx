@@ -1,6 +1,7 @@
 "use strict";
 
 import React from "react";
+
 import {Grommet} from "grommet/components/Grommet";
 import {Anchor} from "grommet/components/Anchor";
 import {Box} from "grommet/components/Box";
@@ -9,14 +10,14 @@ import {Footer} from "grommet/components/Footer";
 import {Grid} from "grommet/components/Grid";
 import {Header} from "grommet/components/Header";
 import {Heading} from "grommet/components/Heading";
-import {Layer} from "grommet/components/Layer";
 import {Nav} from "grommet/components/Nav";
 import {Tabs} from "grommet/components/Tabs";
 import {Tab} from "grommet/components/Tab";
 import {Text} from "grommet/components/Text";
+
 import {Code} from "grommet-icons/icons/Code";
 import {Cube} from "grommet-icons/icons/Cube";
-import {FormClose} from "grommet-icons/icons/FormClose";
+import {Desktop} from "grommet-icons/icons/Desktop";
 import {List as ListIcon} from "grommet-icons/icons/List";
 import {Table} from "grommet-icons/icons/Table";
 // import {V86Terminal} from "./v86";
@@ -28,14 +29,12 @@ import {parse} from "./parser";
 import {assemble} from "./assemble";
 import {FS} from "./file_store";
 
-import {
-    InstructionGrid,
-    InstructionSubGrid,
-    InstructionTable
-} from "./components/instruction_table";
+import {InstructionLayer, OpCodeLayer} from "./components/instruction_table";
 import {About} from "./components/about";
 import {Editor} from "./components/editor";
 import {Files} from "./components/files";
+import {EmulatorDetails} from "./components/emu_details";
+
 
 const colourCodes = {};
 
@@ -52,6 +51,7 @@ export default function App () {
     const [aboutLayer, showAboutLayer] = React.useState(false);
     const [insLayer, showInsLayer] = React.useState(false);
     const [opcodeLayer, showOpcodeLayer] = React.useState(false);
+    const [compLayer, showCompLayer] = React.useState(false);
 
     const [fs] = React.useState(FS());
     const [file, setFile] = React.useState(null);
@@ -97,49 +97,10 @@ export default function App () {
 
     return (
         <Grommet full>
-            {insLayer && (
-                <Layer
-                    position="right"
-                    full="vertical"
-                    modal
-                    onEsc={() => showInsLayer(false)}
-                    onClickOutside={() => showInsLayer(false)}
-                >
-                    <Button label="close" icon={<FormClose/>} onClick={() => showInsLayer(false)}/>
-                    <Heading>8086 Instruction List</Heading>
-                    <Box overflow="auto">
-                        <InstructionTable/>
-                    </Box>
-                </Layer>
-            )}
-
-            {opcodeLayer && (
-                <Layer
-                    position="right"
-                    full="vertical"
-                    modal
-                    onEsc={() => showOpcodeLayer(false)}
-                    onClickOutside={() => showOpcodeLayer(false)}
-                >
-                    <Button label="close" icon={<FormClose/>} onClick={() => showOpcodeLayer(false)}/>
-                    <Box overflow="auto">
-                        <Box><Heading>8086 Op Code Table</Heading></Box>
-                        <Box overflow="scroll"><InstructionGrid/></Box>
-                        <Box><Heading>Sub Op Code Table</Heading></Box>
-                        <Box><InstructionSubGrid/></Box>
-                    </Box>
-                </Layer>
-            )}
-
-            {aboutLayer && (
-                <Layer
-                    modal
-                    onEsc={() => showAboutLayer(false)}
-                    onClickOutside={() => showAboutLayer(false)}
-                >
-                    <About close={() => showAboutLayer(false)}/>
-                </Layer>
-            )}
+            <InstructionLayer isOpen={insLayer} close={() => showInsLayer(false)}/>
+            <OpCodeLayer isOpen={opcodeLayer} close={() => showOpcodeLayer(false)}/>
+            <About isOpen={aboutLayer} close={() => showAboutLayer(false)}/>
+            <EmulatorDetails isOpen={compLayer} close={() => showCompLayer(false)}/>
 
             <Grid
                 rows={["auto", "flex"]}
@@ -152,7 +113,7 @@ export default function App () {
                 ]}
             >
                 <Box gridArea="header">
-                    <Header background="dark-1" gap="medium">
+                    <Header background="dark-1" gap="medium" pad="xsmall">
                         <Box direction="row" align="center" gap="small">
                             <Cube/>
                             <Heading color="white" size="small">
@@ -164,6 +125,7 @@ export default function App () {
                             <Anchor label="About" icon={<Code/>} onClick={() => showAboutLayer(true)}/>
                             <Anchor label="Instructions" icon={<ListIcon/>} onClick={() => showInsLayer(true)}/>
                             <Anchor label="Op Codes" icon={<Table/>} onClick={() => showOpcodeLayer(true)}/>
+                            <Anchor label="Hardware" icon={<Desktop/>} onClick={() => showCompLayer(true)}/>
                         </Nav>
                     </Header>
                 </Box>

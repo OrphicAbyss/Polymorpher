@@ -6,6 +6,8 @@ import {Box} from "grommet/components/Box";
 import {DataTable} from "grommet/components/DataTable";
 import {Text} from "grommet/components/Text";
 import {instructions} from "../instruction";
+import {Heading} from "grommet/components/Heading";
+import {ModalLayer} from "./layer";
 
 export function InstructionTable (props) {
     return (
@@ -150,7 +152,7 @@ export function InstructionGrid (props) {
 }
 
 export function InstructionSubGrid (props) {
-    return (<table>
+    return (<table style={{width: "100%"}}>
         <tbody>
         <tr>
             <td>{"\u00A0"}</td>
@@ -165,4 +167,33 @@ export function InstructionSubGrid (props) {
         ))}
         </tbody>
     </table>);
+}
+
+export function OpCodeLayer (props) {
+    const isOpen = props.isOpen;
+    const close = props.close;
+
+    return (
+        <ModalLayer title="8086 Opcodes & Sub-opcodes" isOpen={isOpen} close={close}>
+            <Box overflow="auto">
+                {/*<Heading level="2">8086 Op Code Table</Heading>*/}
+                <Box overflow="auto"><InstructionGrid/></Box>
+                {/*<Heading level="2">Sub Op Code Table</Heading>*/}
+                <Box><InstructionSubGrid/></Box>
+            </Box>
+        </ModalLayer>
+    )
+}
+
+export function InstructionLayer (props) {
+    const isOpen = props.isOpen;
+    const close = props.close;
+
+    return (
+        <ModalLayer title="8086 Instruction List" isOpen={isOpen} close={close}>
+            <Box overflow="auto">
+                <InstructionTable/>
+            </Box>
+        </ModalLayer>
+    );
 }
