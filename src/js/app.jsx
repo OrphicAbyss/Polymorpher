@@ -20,7 +20,6 @@ import {Cube} from "grommet-icons/icons/Cube";
 import {Desktop} from "grommet-icons/icons/Desktop";
 import {List as ListIcon} from "grommet-icons/icons/List";
 import {Table} from "grommet-icons/icons/Table";
-// import {V86Terminal} from "./v86";
 import {schemeCategory10} from "d3-scale-chromatic";
 
 import {scanCode} from "./scanner";
@@ -35,6 +34,8 @@ import {Editor} from "./components/editor";
 import {Files} from "./components/files";
 import {EmulatorDetails} from "./components/emu_details";
 
+import {Test} from "./8086-emu/8086.asm"
+import {TextArea} from "grommet";
 
 const colourCodes = {};
 
@@ -53,6 +54,8 @@ export default function App () {
     const [opcodeLayer, showOpcodeLayer] = React.useState(false);
     const [compLayer, showCompLayer] = React.useState(false);
 
+    const [emuOutput, setEMUOutput] = React.useState("");
+
     const [fs] = React.useState(FS());
     const [file, setFile] = React.useState(null);
     const [code, setCode] = React.useState("");
@@ -69,6 +72,10 @@ export default function App () {
         setCode(text);
     }
 
+    // TODO: Move assemble step to effect hook
+    // React.useEffect(() => {
+    //
+    // }, [code])
     const timeStart = new Date();
 
     const lexemes = scanCode(code);
@@ -94,6 +101,22 @@ export default function App () {
     }
     const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
     const url = URL.createObjectURL(blob);
+
+    function exec() {
+        const output = [];
+        try {
+            output.push("Running...");
+            const structures = Test(buffer);
+            output.push("Done");
+            structures.logs.forEach((item) => output.push(item));
+            structures.errors.forEach((item) => output.push(item));
+            //output.push(structures.registers.getInstructionLocation().toString(16));
+
+            setEMUOutput(output.join("\n"));
+        } catch (e) {
+            setEMUOutput(e.toString());
+        }
+    }
 
     return (
         <Grommet full>
@@ -172,11 +195,19 @@ export default function App () {
                                 <Button href={url} label="Download Machine Code" download="code.com"/>
                             </Box>
                         </Tab>
-                        {/*<Tab title="x86 Virtual Machine">*/}
-                        {/*    <Box pad="medium">*/}
-                        {/*        <V86Terminal/>*/}
-                        {/*    </Box>*/}
-                        {/*</Tab>*/}
+                        <Tab title="x86 Virtual Machine">
+                            <Box pad="medium">
+                                <Text>Run code using the built in 8086 emulator:</Text>
+                                <Anchor label="Run..." onClick={() => exec()}/>
+                                <Box height="large">
+                                    <TextArea value={emuOutput} fill></TextArea>
+                                </Box>
+                                <Box direction="row">
+                                    <Box background="brand" round="xsmall" pad="xsmall">AX</Box>
+                                    <Box background="dark-1" round="xsmall" pad="xsmall">{(0).toString(16)}h</Box>
+                                </Box>
+                            </Box>
+                        </Tab>
                     </Tabs>
                 </Box>
                 <Box gridArea="footer">
