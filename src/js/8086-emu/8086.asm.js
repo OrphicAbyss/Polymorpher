@@ -1141,13 +1141,11 @@ function Bus (stdlib, foreign, heap) {
         address = address | 0;
         data = data | 0;
 
-
     }
 
     function read(bits, address) {
         bits = bits | 0;
         address = address | 0;
-
 
     }
 
