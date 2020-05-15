@@ -25,5 +25,18 @@
 
 
 <!--<script src="/build/libv86.js"></script>-->
+<script type="application/javascript">
+    // Only include if production version
+    if (window.location.hostname === "webasm.jorts.solutions") {
+        const body = document.getElementsByTagName("body")[0];
+
+        const script = document.createElement("script");
+        script.async = true;
+        script.defer = true;
+        script["data-domain"] = "webasm.jorts.solutions";
+        script.src = "https://plausible.io/js/plausible.js";
+        body.appendChild(script);
+    }
+</script>
 </body>
 </html>

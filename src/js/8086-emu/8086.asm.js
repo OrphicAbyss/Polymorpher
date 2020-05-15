@@ -1233,6 +1233,7 @@ export function Test (biosBinary) {
     return {
         logs,
         errors,
+        cpu,
         registers
     };
 }

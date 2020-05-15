@@ -36,6 +36,7 @@ import {EmulatorDetails} from "./components/emu_details";
 
 import {Test} from "./8086-emu/8086.asm"
 import {TextArea} from "grommet";
+import {EMU8086} from "./components/8086emu";
 
 const colourCodes = {};
 
@@ -53,8 +54,6 @@ export default function App () {
     const [insLayer, showInsLayer] = React.useState(false);
     const [opcodeLayer, showOpcodeLayer] = React.useState(false);
     const [compLayer, showCompLayer] = React.useState(false);
-
-    const [emuOutput, setEMUOutput] = React.useState("");
 
     const [fs] = React.useState(FS());
     const [file, setFile] = React.useState(null);
@@ -101,22 +100,6 @@ export default function App () {
     }
     const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
     const url = URL.createObjectURL(blob);
-
-    function exec() {
-        const output = [];
-        try {
-            output.push("Running...");
-            const structures = Test(buffer);
-            output.push("Done");
-            structures.logs.forEach((item) => output.push(item));
-            structures.errors.forEach((item) => output.push(item));
-            //output.push(structures.registers.getInstructionLocation().toString(16));
-
-            setEMUOutput(output.join("\n"));
-        } catch (e) {
-            setEMUOutput(e.toString());
-        }
-    }
 
     return (
         <Grommet full>
@@ -197,15 +180,7 @@ export default function App () {
                         </Tab>
                         <Tab title="x86 Virtual Machine">
                             <Box pad="medium">
-                                <Text>Run code using the built in 8086 emulator:</Text>
-                                <Anchor label="Run..." onClick={() => exec()}/>
-                                <Box height="large">
-                                    <TextArea value={emuOutput} fill></TextArea>
-                                </Box>
-                                <Box direction="row">
-                                    <Box background="brand" round="xsmall" pad="xsmall">AX</Box>
-                                    <Box background="dark-1" round="xsmall" pad="xsmall">{(0).toString(16)}h</Box>
-                                </Box>
+                                <EMU8086 bios={buffer}/>
                             </Box>
                         </Tab>
                     </Tabs>
