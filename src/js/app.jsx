@@ -73,7 +73,7 @@ export default function App () {
                 return;
         }
         if (window.plausible && window.plausible.q) {
-            window.plausible.q.push([layer, value]);
+            window.plausible.q.push([layer + "-" + value]);
         }
     }
 
@@ -132,7 +132,7 @@ export default function App () {
     const onActive = index => {
         setTabIndex(index);
         if (window.plausible && window.plausible.q) {
-            window.plausible.q.push([tabNames[index], index]);
+            window.plausible.q.push([tabNames[index]]);
         }
     }
 
