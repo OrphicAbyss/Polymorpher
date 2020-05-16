@@ -1186,7 +1186,7 @@ export function Test (biosBinary) {
                 // is part of the bios mapped memory
                 return bios;
             } else {
-                console.log("Unknown memory access at: " + loc.toString(16))
+                // console.log("Unknown memory access at: " + loc.toString(16))
                 return noMemory;
             }
         }
@@ -1211,20 +1211,20 @@ export function Test (biosBinary) {
     const errors = [];
     const addLog = (...log) => logs.push(log.join(""));
     const addError = (...err) => errors.push(err.join(""));
-    let steps = 0;
 
     const mappedMemory = new MappedMemory();
     const cpu = new Instructions(window, {registers, memory: mappedMemory, log: addLog, error: addError}, null);
 
-    const logPosAndCode = () => {
-        const IP = registers.getInstructionLocation();
-        addLog(`0:${numToHex(IP)} Op ${numToHex(mappedMemory.getByte(IP))}`);
-    }
-    while (errors.length === 0 && steps < 100) {
-        // logPosAndCode();
-        cpu.execute();
-        steps++;
-    }
+    // const logPosAndCode = () => {
+    //     const IP = registers.getInstructionLocation();
+    //     addLog(`0:${numToHex(IP)} Op ${numToHex(mappedMemory.getByte(IP))}`);
+    // }
+    // let steps = 0;
+    // while (errors.length === 0 && steps < 100) {
+    //     // logPosAndCode();
+    //     cpu.execute();
+    //     steps++;
+    // }
     // logPosAndCode();
     // console.log(errors[0]);
 
@@ -1232,7 +1232,8 @@ export function Test (biosBinary) {
         logs,
         errors,
         cpu,
-        registers
+        registers,
+        memory: mappedMemory
     };
 }
 

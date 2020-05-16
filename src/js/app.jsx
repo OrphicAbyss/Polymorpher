@@ -55,6 +55,31 @@ export default function App () {
     const [opcodeLayer, showOpcodeLayer] = React.useState(false);
     const [compLayer, showCompLayer] = React.useState(false);
 
+    const toggle = (layer, value) => {
+        switch (layer) {
+            case "about":
+                showAboutLayer(value);
+                break;
+            case "ins":
+                showInsLayer(value);
+                break;
+            case "opcode":
+                showOpcodeLayer(value);
+                break;
+            case "comp":
+                showCompLayer(value);
+                break;
+            default:
+                return;
+        }
+        if (window.plausible && window.plausible.q) {
+            window.plausible.q.push([layer, value]);
+        }
+    }
+
+    const show = (layer) => toggle(layer, true);
+    const close = (layer) => toggle(layer, false);
+
     const [fs] = React.useState(FS());
     const [file, setFile] = React.useState(null);
     const [code, setCode] = React.useState("");
@@ -101,12 +126,22 @@ export default function App () {
     const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
     const url = URL.createObjectURL(blob);
 
+    const [tabIndex, setTabIndex] = React.useState();
+    const tabNames = ["Code", "Tokens", "Parsed", "Binary", "Formatted Binary", "x86 Virtual Machine"];
+
+    const onActive = index => {
+        setTabIndex(index);
+        if (window.plausible && window.plausible.q) {
+            window.plausible.q.push([tabNames[index], index]);
+        }
+    }
+
     return (
         <Grommet full>
-            <InstructionLayer isOpen={insLayer} close={() => showInsLayer(false)}/>
-            <OpCodeLayer isOpen={opcodeLayer} close={() => showOpcodeLayer(false)}/>
-            <About isOpen={aboutLayer} close={() => showAboutLayer(false)}/>
-            <EmulatorDetails isOpen={compLayer} close={() => showCompLayer(false)}/>
+            <InstructionLayer isOpen={insLayer} close={() => close("ins")}/>
+            <OpCodeLayer isOpen={opcodeLayer} close={() => close("opcode")}/>
+            <About isOpen={aboutLayer} close={() => close("about")}/>
+            <EmulatorDetails isOpen={compLayer} close={() => close("comp")}/>
 
             <Grid
                 rows={["auto", "flex"]}
@@ -128,10 +163,10 @@ export default function App () {
                             <Text>An online x86 assembler</Text>
                         </Box>
                         <Nav direction="row">
-                            <Anchor label="About" icon={<Code/>} onClick={() => showAboutLayer(true)}/>
-                            <Anchor label="Instructions" icon={<ListIcon/>} onClick={() => showInsLayer(true)}/>
-                            <Anchor label="Op Codes" icon={<Table/>} onClick={() => showOpcodeLayer(true)}/>
-                            <Anchor label="Hardware" icon={<Desktop/>} onClick={() => showCompLayer(true)}/>
+                            <Anchor label="About" icon={<Code/>} onClick={() => show("about")}/>
+                            <Anchor label="Instructions" icon={<ListIcon/>} onClick={() => show("ins")}/>
+                            <Anchor label="Op Codes" icon={<Table/>} onClick={() => show("opcode")}/>
+                            <Anchor label="Hardware" icon={<Desktop/>} onClick={() => show("comp")}/>
                         </Nav>
                     </Header>
                 </Box>
