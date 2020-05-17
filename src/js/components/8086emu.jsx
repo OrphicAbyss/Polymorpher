@@ -154,14 +154,16 @@ export function EMU8086 (props) {
         }
     }
 
-    function runCPU () {
+    function runCPU (mul) {
+        mul = mul || 1;
+
         if (cpu) {
             pauseCPU();
 
             stepCPU();
             const timer = setInterval(() => {
                 stepCPU();
-            }, 1000);
+            }, 1000 / mul);
 
             setCpuTimer(timer);
         }
@@ -198,6 +200,8 @@ export function EMU8086 (props) {
                 {cpu && <Button label="Reset" onClick={() => reset()}/>}
                 {cpu && <Button label="Step" onClick={() => stepCPU()}/>}
                 {cpu && !cpuTimer && <Button label="Run" onClick={() => runCPU()}/>}
+                {cpu && !cpuTimer && <Button label="Run x2" onClick={() => runCPU(2)}/>}
+                {cpu && !cpuTimer && <Button label="Run x4" onClick={() => runCPU(4)}/>}
                 {cpu && cpuTimer && <Button label="Pause" onClick={() => pauseCPU()}/>}
                 {/*<Text>CPU Step: {step}</Text>*/}
             </Box>

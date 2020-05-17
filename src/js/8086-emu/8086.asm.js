@@ -8,8 +8,6 @@
  */
 
 
-// import {Register, registers} from "../register";
-
 const numToHex = (num) => num.toString(16).toUpperCase();
 
 /**
@@ -189,10 +187,116 @@ function Registers(stdlib, foreign, heap) {
         setFlags(value | CF);
     }
 
+    function clearDirectionFlag () {
+        const value = getFlags() | 0;
+
+        setFlags(value & (All ^ DF));
+    }
+
+    function setDirectionFlag () {
+        const value = getFlags() | 0;
+
+        setFlags(value | DF);
+    }
+
+    function lookup8bit(bitCode) {
+        bitCode = bitCode | 0;
+
+        switch (bitCode) {
+            case AL:
+                return "AL";
+            case CL:
+                return "CL";
+            case DL:
+                return "DL";
+            case BL:
+                return "BL";
+            case AH:
+                return "AH";
+            case CH:
+                return "CH";
+            case DH:
+                return "DH";
+            case BH:
+                return "BH";
+            default:
+                return "xx";
+        }
+    }
+
+    function lookup16bit(bitCode) {
+        bitCode = bitCode | 0;
+
+        switch (bitCode) {
+            case AX:
+                return "AX";
+            case CX:
+                return "CX";
+            case DX:
+                return "DX";
+            case BX:
+                return "BX";
+            case SP:
+                return "SP";
+            case BP:
+                return "BP";
+            case SI:
+                return "SI";
+            case DI:
+                return "DI";
+            default:
+                return "XX";
+        }
+    }
+
+    function lookup(bits, bitCode) {
+        bits = bits | 0;
+        bitCode = bitCode | 0;
+
+        switch (bits) {
+            case 8:
+                return lookup8bit(bitCode);
+            case 16:
+                return lookup16bit(bitCode);
+            default:
+                return "ZZ";
+        }
+    }
+
+    function getGeneral(bits, bitCode) {
+        bits = bits | 0;
+        bitCode = bitCode | 0;
+
+        switch (bits) {
+            case 8:
+                return getGeneral8Bit(bitCode);
+            case 16:
+                return getGeneral16Bit(bitCode);
+            default:
+                return -1;
+        }
+    }
+
+    function setGeneral(bits, bitCode, number) {
+        bits = bits | 0;
+        bitCode = bitCode | 0;
+
+        switch (bits) {
+            case 8:
+                return setGeneral8Bit(bitCode, number);
+            case 16:
+                return setGeneral16Bit(bitCode, number);
+            default:
+                return -1;
+        }
+    }
+
     // Initialise flags
     setFlags(Set);
 
     return {
+        getGeneral,
+        setGeneral,
         getGeneral8Bit,
         setGeneral8Bit,
         getGeneral16Bit,
@@ -205,65 +309,22 @@ function Registers(stdlib, foreign, heap) {
         setInterruptFlag,
         clearCarryFlag,
         setCarryFlag,
+        clearDirectionFlag,
+        setDirectionFlag,
         getInstructionPointer,
         setInstructionPointer,
         incInstructionPointer,
         getInstructionLocation,
+        lookup,
         reg8: {
             AL, CL, DL, BL,
             AH, CH, DH, BH,
-            lookup: (bit) => {
-                bit = bit | 0;
-
-                switch (bit) {
-                    case AL:
-                        return "AL";
-                    case CL:
-                        return "CL";
-                    case DL:
-                        return "DL";
-                    case BL:
-                        return "BL";
-                    case AH:
-                        return "AH";
-                    case CH:
-                        return "CH";
-                    case DH:
-                        return "DH";
-                    case BH:
-                        return "BH";
-                    default:
-                        return "xx";
-                }
-            }
+            lookup: lookup8bit
         },
         reg16: {
             AX, CX, DX, BX,
             SP, BP, SI, DI,
-            lookup: (bit) => {
-                bit = bit | 0;
-
-                switch (bit) {
-                    case AX:
-                        return "AX";
-                    case CX:
-                        return "CX";
-                    case DX:
-                        return "DX";
-                    case BX:
-                        return "BX";
-                    case SP:
-                        return "SP";
-                    case BP:
-                        return "BP";
-                    case SI:
-                        return "SI";
-                    case DI:
-                        return "DI";
-                    default:
-                        return "XX";
-                }
-            }
+            lookup: lookup16bit
         },
         seg16: {
             ES, CS, SS, DS,
@@ -296,7 +357,6 @@ function Memory (stdlib, foreign, heap) {
 
     // use heap as a the register file, access either as 8bit or 16bit values
     const memByte = new stdlib.Uint8Array(heap);
-    const memWord = new stdlib.Uint16Array(heap);
 
     var offset = 0x0;
 
@@ -322,18 +382,50 @@ function Memory (stdlib, foreign, heap) {
     function getWord (addr) {
         addr = addr | 0;
 
-        return memWord[addr - offset] | 0;
+        return memByte[addr - offset] | (memByte[addr - offset + 1] << 8) | 0;
     }
 
     function setWord (addr, value) {
         addr = addr | 0;
         value = value | 0;
 
-        memWord[addr - offset] = value | 0;
+        memByte[addr - offset] = value & 0b11111111;
+        memByte[addr - offset + 1] = value >> 8;
+    }
+
+    function get(bits, addr) {
+        bits = bits | 0;
+        addr = addr | 0;
+
+        switch (bits) {
+            case 8:
+                return getByte(addr);
+            case 16:
+                return getWord(addr);
+            default:
+                return -1;
+        }
+    }
+
+    function set(bits, addr, value) {
+        bits = bits | 0;
+        addr = addr | 0;
+        value = value | 0;
+
+        switch (bits) {
+            case 8:
+                return setByte(addr, value);
+            case 16:
+                return setWord(addr, value);
+            default:
+                return -1;
+        }
     }
 
     return {
         setOffset,
+        get,
+        set,
         getByte,
         setByte,
         getWord,
@@ -343,6 +435,8 @@ function Memory (stdlib, foreign, heap) {
 
 function Instructions (stdlib, foreign, heap) {
     "use asm";
+
+    const registers = foreign.registers;
 
     function getModRM(insLoc) {
         insLoc = insLoc | 0;
@@ -386,15 +480,114 @@ function Instructions (stdlib, foreign, heap) {
         flag = flag | 0;
         cmp = cmp | 0;
 
-        const flags = foreign.registers.getFlags() | 0;
+        const flags = registers.getFlags() | 0;
         const offset = getRel(insLoc + 1, 8) | 0;
 
         if ((flags & flag) === cmp) {
             // move to new location
-            foreign.registers.incInstructionPointer(offset);
+            registers.incInstructionPointer(offset);
         }
 
         return offset | 0;
+    }
+
+    function setFlagsOPSZ (previous, result) {
+        previous = previous | 0;
+        result = result | 0;
+
+        const flags = registers.flags;
+        let flagState = registers.getFlags();
+
+        let clearFlags = flags.All;
+        let setFlags = 0;
+
+        if ((previous & 0b10000000) === (result & 0b10000000)) {
+            clearFlags = clearFlags ^ flags.OF;
+        } else {
+            setFlags = setFlags | flags.OF;
+        }
+
+        if ((result & 0b10000000) !== 0) {
+            clearFlags = clearFlags ^ flags.SF;
+        } else {
+            setFlags = setFlags | flags.SF;
+        }
+
+        if (result === 0) {
+            clearFlags = clearFlags ^ flags.ZF;
+        } else {
+            setFlags = setFlags | flags.ZF;
+        }
+
+        let parity = 0;
+        let test = result & 0b11111111;
+        parity = test & 0b1 + test >> 1 & 0b1 + test >> 2 & 0b1 + test >> 3 & 0b1 + test >> 4 & 0b1
+            + test >> 5 & 0b1 + test >> 6 & 0b1 + test >> 7 & 0b1;
+
+        if (parity % 2 === 1) {
+            clearFlags = clearFlags ^ flags.PF;
+        } else {
+            setFlags = setFlags | flags.PF;
+        }
+
+        flagState = flagState & clearFlags | setFlags;
+        registers.setFlags(flagState);
+    }
+
+    function setFlagsACOPSZ (previous, result, carry) {
+        previous = previous | 0;
+        result = result | 0;
+        carry = carry | 0;
+
+        const flags = registers.flags;
+        let flagState = registers.getFlags();
+
+        let clearFlags = flags.All;
+        let setFlags = 0;
+
+        if (carry === 0) {
+            clearFlags = clearFlags ^ flags.CF;
+        } else {
+            setFlags = setFlags | flags.CF;
+        }
+
+        if ((previous & 0b00010000) === (result & 0b00010000)) {
+            clearFlags = clearFlags ^ flags.AF;
+        } else {
+            setFlags = setFlags | flags.AF;
+        }
+
+        if ((previous & 0b10000000) === (result & 0b10000000)) {
+            clearFlags = clearFlags ^ flags.OF;
+        } else {
+            setFlags = setFlags | flags.OF;
+        }
+
+        if ((result & 0b10000000) !== 0) {
+            clearFlags = clearFlags ^ flags.SF;
+        } else {
+            setFlags = setFlags | flags.SF;
+        }
+
+        if (result === 0) {
+            clearFlags = clearFlags ^ flags.ZF;
+        } else {
+            setFlags = setFlags | flags.ZF;
+        }
+
+        let parity = 0;
+        let test = result & 0b11111111;
+        parity = test & 0b1 + test >> 1 & 0b1 + test >> 2 & 0b1 + test >> 3 & 0b1 + test >> 4 & 0b1
+            + test >> 5 & 0b1 + test >> 6 & 0b1 + test >> 7 & 0b1;
+
+        if (parity % 2 === 1) {
+            clearFlags = clearFlags ^ flags.PF;
+        } else {
+            setFlags = setFlags | flags.PF;
+        }
+
+        flagState = flagState & clearFlags | setFlags;
+        registers.setFlags(flagState);
     }
 
     function setFlagsCOPSZ (previous, result, carry) {
@@ -402,8 +595,8 @@ function Instructions (stdlib, foreign, heap) {
         result = result | 0;
         carry = carry | 0;
 
-        const flags = foreign.registers.flags;
-        let flagState = foreign.registers.getFlags();
+        const flags = registers.flags;
+        let flagState = registers.getFlags();
 
         let clearFlags = flags.All;
         let setFlags = 0;
@@ -444,7 +637,7 @@ function Instructions (stdlib, foreign, heap) {
         }
 
         flagState = flagState & clearFlags | setFlags;
-        foreign.registers.setFlags(flagState);
+        registers.setFlags(flagState);
     }
 
     /**
@@ -454,8 +647,8 @@ function Instructions (stdlib, foreign, heap) {
     function setFlags (result) {
         result = result | 0;
 
-        const flags = foreign.registers.flags;
-        let flagState = foreign.registers.getFlags();
+        const flags = registers.flags;
+        let flagState = registers.getFlags();
 
         let clearFlags = flags.All ^ flags.OF ^ flags.CF;
         let setFlags = 0;
@@ -484,11 +677,11 @@ function Instructions (stdlib, foreign, heap) {
         }
 
         flagState = flagState & clearFlags | setFlags;
-        foreign.registers.setFlags(flagState);
+        registers.setFlags(flagState);
     }
 
     function execute() {
-        const insLoc = foreign.registers.getInstructionLocation() | 0;
+        const insLoc = registers.getInstructionLocation() | 0;
         const opCode = foreign.memory.getByte(insLoc) | 0;
         let opCodeBytes = 1;
 
@@ -496,160 +689,401 @@ function Instructions (stdlib, foreign, heap) {
             // ADD
             case 0x00:
                 // Add r/m8, r8
-                getModRM(insLoc + 1);
-                opCodeBytes += 2;
-
-                break;
             case 0x01:
                 // Add r/m16, r16
-                break;
             case 0x02:
                 // Add r8, r/m8
-                break;
-            case 0x03:
+            case 0x03: {
                 // Add r16, r/m16
-                break;
-            case 0x04:
-                // Add AL, d8
-                getImm(insLoc + 1, 8);
+                let bits;
+
+                switch (opCode & 0b01) {
+                    case 0:
+                        bits = 8;
+                        break;
+                    case 1:
+                        bits = 16;
+                        break;
+                }
+
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
+
+                const mem = modRM & 0b11000000;
+                const reg = (modRM & 0b00111000) >> 3;
+                const memReg = modRM & 0b00000111;
+
+                let memRegName;
+                const regName = registers.lookup(bits, reg);
+
+                let memRegValue = 0;
+                let addr = 0;
+
+                switch (mem >> 6) {
+                    case 0:
+                        // mem no displacement
+                        switch (memReg) {
+                            case 0:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 1:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 2:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 3:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 4:
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 5:
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 6:
+                                // 16 bit displacement only
+                                addr += getRel(insLoc + 2, 16);
+                                opCodeBytes += 2;
+                                break;
+                            case 7:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                break;
+                        }
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        break;
+                    case 1:
+                        // mem with 8 bit displacement
+                        addr = getRel(insLoc + 2, 8);
+                        opCodeBytes += 1;
+
+                        switch (memReg) {
+                            case 0:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 1:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 2:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 3:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 4:
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 5:
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 6:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                break;
+                            case 7:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                break;
+                        }
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        break;
+                    case 2:
+                        // mem with 16 bit displacement
+                        addr = getRel(insLoc + 2, 16);
+                        opCodeBytes += 2;
+
+                        switch (memReg) {
+                            case 0:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 1:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 2:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 3:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 4:
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 5:
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 6:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                break;
+                            case 7:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                break;
+                        }
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        break;
+                    case 3:
+                        // register
+                        memRegName = registers.lookup(bits, memReg);
+                        memRegValue = registers.getGeneral(bits, memReg);
+                        break;
+                }
+
+                const regValue = registers.getGeneral(bits, reg);
+                const result = memRegValue + regValue;
+
+                if (opCode === 0x00) {
+                    setFlagsACOPSZ(memRegValue, result);
+                    registers.setGeneral(bits, memReg, result);
+                    foreign.log("ADD ", memRegName, ", ", regName);
+                } else if (opCode === 0x02) {
+                    setFlagsACOPSZ(regValue, result);
+                    registers.setGeneral(bits, reg, result);
+                    foreign.log("ADD ", regName, ", ", memRegName);
+                } else {
+                    foreign.error("Invalid opcode being handled by 00/02 handler: ", opCode);
+                }
 
                 break;
-            case 0x05:
-                // Add AX, d16
-                getImm(insLoc + 1, 16);
+            }
+            case 0x04: {
+                // Add AL, imm8
+                const imm = getImm(insLoc + 1, 8);
+                opCodeBytes += 1;
+                const reg = registers.reg8.AL;
+                const value = registers.getGeneral8Bit(reg);
+                const output = value + imm;
+                const carry = output & 0b100000000 > 0;
 
+                registers.setGeneral8Bit(reg, output);
+
+                setFlagsACOPSZ(value, output, carry);
+
+                foreign.log("ADD AL, ", imm);
                 break;
+            }
+            case 0x05: {
+                // Add AX, imm16
+                const imm = getImm(insLoc + 1, 16);
+                opCodeBytes += 2;
+                const reg = registers.reg16.AX;
+                const value = registers.getGeneral16Bit(reg);
+                const output = value + imm;
+                const carry = output & 0b10000000000000000 > 0;
 
-            // OR
+                registers.setGeneral8Bit(reg, output);
+
+                setFlagsACOPSZ(value, output, carry);
+
+                foreign.log("ADD AX, ", imm);
+                break;
+            }
+
             case 0x08:
-                // Or r/m8, r8
-                break;
+                // OR r/m8, r8
             case 0x09:
-                // Or r/m16, r16
-                break;
+                // OR r/m16, r16
             case 0x0A:
-                // Or r8, r/m8
-                break;
-            case 0x0B:
-                // Or r16, r/m16
-                break;
-            case 0x0C:
-                // Or AL, d8
-                break;
-            case 0x0D:
-                // Or AX, d16
-                break;
+                // OR r8, r/m8
+            case 0x0B: {
+                // OR r16, r/m16
+                let bits;
 
-            case 0x06:
-                // Push ES
-                break;
-            case 0x07:
-                // Pop ES
-                break;
+                switch (opCode & 0b01) {
+                    case 0:
+                        bits = 8;
+                        break;
+                    case 1:
+                        bits = 16;
+                        break;
+                }
 
-            case 0x0E:
-                // Push CS
-                break;
-            case 0x0F:
-                // Pop CS
-                break;
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
 
-            // ADC
-            case 0x10:
-                // Adc r/m8, r8
-                break;
-            case 0x11:
-                // Adc r/m16, r16
-                break;
-            case 0x12:
-                // Adc r8, r/m8
-                break;
-            case 0x13:
-                // Adc r16, r/m16
-                break;
-            case 0x14:
-                // Adc AL, d8
-                break;
-            case 0x15:
-                // Adc AX, d16
-                break;
+                const mem = modRM & 0b11000000;
+                const reg = (modRM & 0b00111000) >> 3;
+                const memReg = modRM & 0b00000111;
 
-            // SBB
-            case 0x18:
-                // Sbb r/m8, r8
-                break;
-            case 0x19:
-                // Sbb r/m16, r16
-                break;
-            case 0x1A:
-                // Sbb r8, r/m8
-                break;
-            case 0x1B:
-                // Sbb r16, r/m16
-                break;
-            case 0x1C:
-                // Sbb AL, d8
-                break;
-            case 0x1D:
-                // Sbb AX, d16
-                break;
+                const memRegName = registers.lookup(bits, memReg);
+                const regName = registers.lookup(bits ,reg);
 
-            case 0x16:
-                // Push SS
-                break;
-            case 0x17:
-                // Pop SS
-                break;
+                if ((mem ^ 0b11000000) !== 0) {
+                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
+                    return;
+                }
 
-            case 0x1E:
-                // Push DS
+                const memRegValue = registers.getGeneral(8, memReg);
+                const regValue = registers.getGeneral(8, reg);
+
+                const result = memRegValue | regValue;
+                setFlags(result);
+
+                switch (opCode & 0b010) {
+                    case 0b00:
+                        registers.setGeneral(8, memReg, result);
+                        foreign.log("OR ", memRegName, ", ", regName);
+                        break;
+                    case 0b10:
+                        registers.setGeneral(8, reg, result);
+                        foreign.log("OR ", regName, ", ", memRegName);
+                        break;
+                    default:
+                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
+                }
+
                 break;
-            case 0x1F:
-                // Pop DS
+            }
+            case 0x0C: {
+                // OR AL, imm8
+                const imm = getImm(insLoc + 1, 8);
+                opCodeBytes += 1;
+                const reg = registers.reg8.AL;
+                const value = registers.getGeneral8Bit(reg);
+                const output = value | imm;
+
+                registers.setGeneral8Bit(reg, output);
+
+                setFlags(output);
+
+                foreign.log("OR AL, ", imm);
                 break;
+            }
+            case 0x0D: {
+                // OR AX, imm16
+                const imm = getImm(insLoc + 1, 16);
+                opCodeBytes += 2;
+                const reg = registers.reg16.AX;
+                const value = registers.getGeneral16Bit(reg);
+                const output = value | imm;
+
+                registers.setGeneral8Bit(reg, output);
+
+                setFlags(output);
+
+                foreign.log("OR AX, ", imm);
+                break;
+            }
+
+
+            // // OR
+            // case 0x08:
+            //     // Or r/m8, r8
+            //     break;
+            // case 0x09:
+            //     // Or r/m16, r16
+            //     break;
+            // case 0x0A:
+            //     // Or r8, r/m8
+            //     break;
+            // case 0x0B:
+            //     // Or r16, r/m16
+            //     break;
+            // case 0x0C:
+            //     // Or AL, d8
+            //     break;
+            // case 0x0D:
+            //     // Or AX, d16
+            //     break;
+
+            // case 0x06:
+            //     // Push ES
+            //     break;
+            // case 0x07:
+            //     // Pop ES
+            //     break;
+            //
+            // case 0x0E:
+            //     // Push CS
+            //     break;
+            // case 0x0F:
+            //     // Pop CS
+            //     break;
+            //
+            // // ADC
+            // case 0x10:
+            //     // Adc r/m8, r8
+            //     break;
+            // case 0x11:
+            //     // Adc r/m16, r16
+            //     break;
+            // case 0x12:
+            //     // Adc r8, r/m8
+            //     break;
+            // case 0x13:
+            //     // Adc r16, r/m16
+            //     break;
+            // case 0x14:
+            //     // Adc AL, d8
+            //     break;
+            // case 0x15:
+            //     // Adc AX, d16
+            //     break;
+            //
+            // // SBB
+            // case 0x18:
+            //     // Sbb r/m8, r8
+            //     break;
+            // case 0x19:
+            //     // Sbb r/m16, r16
+            //     break;
+            // case 0x1A:
+            //     // Sbb r8, r/m8
+            //     break;
+            // case 0x1B:
+            //     // Sbb r16, r/m16
+            //     break;
+            // case 0x1C:
+            //     // Sbb AL, d8
+            //     break;
+            // case 0x1D:
+            //     // Sbb AX, d16
+            //     break;
+            //
+            // case 0x16:
+            //     // Push SS
+            //     break;
+            // case 0x17:
+            //     // Pop SS
+            //     break;
+            //
+            // case 0x1E:
+            //     // Push DS
+            //     break;
+            // case 0x1F:
+            //     // Pop DS
+            //     break;
 
             case 0x30:
                 // XOR r/m8, r8
-            case 0x32: {
-                // XOR r8, r/m8
-                const modRM = getModRM(insLoc + 1);
-                opCodeBytes += 1;
-
-                const mem = modRM & 0b11000000;
-                const reg = (modRM & 0b00111000) >> 3;
-                const memReg = modRM & 0b00000111;
-
-                const memRegName = foreign.registers.reg8.lookup(memReg);
-                const regName = foreign.registers.reg8.lookup(reg);
-
-                if ((mem ^ 0b11000000) !== 0) {
-                    foreign.error(opCode, modRM, regName, memRegName, "Memory lookup not supported");
-                    return;
-                }
-
-                const memRegValue = foreign.registers.getGeneral8Bit(memReg);
-                const regValue = foreign.registers.getGeneral8Bit(reg);
-
-                const result = memRegValue ^ regValue;
-                setFlags(result);
-
-                if (opCode === 0x30) {
-                    foreign.registers.setGeneral8Bit(memReg, result);
-                    foreign.log("XOR ", memRegName, ", ", regName);
-                } else if (opCode === 0x32) {
-                    foreign.registers.setGeneral8Bit(reg, result);
-                    foreign.log("XOR ", regName, ", ", memRegName);
-                } else {
-                    foreign.error("Invalid opcode being handled by 30/32 handler: ", opCode);
-                }
-
-                break;
-            }
-
             case 0x31:
                 // XOR r/m16, r16
+            case 0x32:
+                // XOR r8, r/m8
             case 0x33: {
                 // XOR r16, r/m16
+                let bits;
+
+                switch (opCode & 0b01) {
+                    case 0:
+                        bits = 8;
+                        break;
+                    case 1:
+                        bits = 16;
+                        break;
+                }
+
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
@@ -657,37 +1091,108 @@ function Instructions (stdlib, foreign, heap) {
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = foreign.registers.reg16.lookup(memReg);
-                const regName = foreign.registers.reg16.lookup(reg);
+                const memRegName = registers.lookup(bits, memReg);
+                const regName = registers.lookup(bits, reg);
 
                 if ((mem ^ 0b11000000) !== 0) {
-                    foreign.error(opCode, modRM, regName, memRegName, "Memory lookup not supported");
+                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
                     return;
                 }
 
-                const memRegValue = foreign.registers.getGeneral16Bit(memReg);
-                const regValue = foreign.registers.getGeneral16Bit(reg);
+                const memRegValue = registers.getGeneral(bits, memReg);
+                const regValue = registers.getGeneral(bits, reg);
 
                 const result = memRegValue ^ regValue;
                 setFlags(result);
 
-                if (opCode === 0x31) {
-                    foreign.registers.setGeneral16Bit(memReg, result);
-                    foreign.log("XOR ", memRegName, ", ", regName);
-                } else if (opCode === 0x33) {
-                    foreign.registers.setGeneral16Bit(reg, result);
-                    foreign.log("XOR ", regName, ", ", memRegName);
-                } else {
-                    foreign.error("Invalid opcode being handled by 30/32 handler: ", opCode);
+                switch (opCode & 0b010) {
+                    case 0b00:
+                        registers.setGeneral(bits, memReg, result);
+                        foreign.log("XOR ", memRegName, ", ", regName);
+                        break;
+                    case 0b10:
+                        registers.setGeneral(bits, reg, result);
+                        foreign.log("XOR ", regName, ", ", memRegName);
+                        break;
+                    default:
+                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
                 }
 
                 break;
             }
+            case 0x34: {
+                // Add AL, imm8
+                const imm = getImm(insLoc + 1, 8);
+                opCodeBytes += 1;
+                const reg = registers.reg8.AL;
+                const value = registers.getGeneral(8, reg);
+                const output = value ^ imm;
 
+                registers.setGeneral(8, reg, output);
 
+                setFlags(output);
+
+                foreign.log("XOR AL, ", imm);
+                break;
+            }
+            case 0x35: {
+                // Add AX, imm16
+                const imm = getImm(insLoc + 1, 16);
+                opCodeBytes += 2;
+                const reg = registers.reg16.AX;
+                const value = registers.getGeneral(16, reg);
+                const output = value ^ imm;
+
+                registers.setGeneral(16, reg, output);
+
+                setFlags(output);
+
+                foreign.log("XOR AX, ", imm);
+                break;
+            }
+
+            case 0x40:
+            case 0x41:
+            case 0x42:
+            case 0x43:
+            case 0x44:
+            case 0x45:
+            case 0x47:
+            case 0x48:
+            case 0x49:
+            case 0x4A:
+            case 0x4B:
+            case 0x4C:
+            case 0x4D:
+            case 0x4E:
+            case 0x4F:
+                // INC/DEC r16
+                const reg = opCode & 0b00000111;
+                const regName = registers.reg16.lookup(reg);
+                const regValue = registers.getGeneral16Bit(reg);
+                let newValue = 0;
+
+                // Select bit that denotes specific action
+                switch (opCode & 0b00001000) {
+                    case 0x00:
+                        newValue = (regValue + 1) | 0;
+                        registers.setGeneral16Bit(reg, newValue);
+                        foreign.log("INC ", regName);
+                        break;
+                    case 0x08:
+                        newValue = (regValue - 1) | 0;
+                        registers.setGeneral16Bit(reg, newValue);
+                        foreign.log("DEC ", regName);
+                        break;
+                    default:
+                        foreign.error("Invalid opcode being handled by 4x handler: ", opCode);
+                }
+                setFlagsOPSZ(regValue, newValue);
+
+                break;
             case 0x70:{
                 // JO
-                const OF = foreign.registers.flags.OF;
+                const OF = registers.flags.OF;
                 const offset = flagJmp(insLoc, OF, OF);
                 opCodeBytes += 1;
 
@@ -696,7 +1201,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x71: {
                 // JNO
-                const OF = foreign.registers.flags.OF;
+                const OF = registers.flags.OF;
                 const offset = flagJmp(insLoc, OF, 0);
                 opCodeBytes += 1;
 
@@ -705,7 +1210,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x72: {
                 // JC, JB, JNAE
-                const CF = foreign.registers.flags.CF;
+                const CF = registers.flags.CF;
                 const offset = flagJmp(insLoc, CF, CF);
                 opCodeBytes += 1;
 
@@ -714,7 +1219,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x73: {
                 // JNC, JNB, JAE
-                const CF = foreign.registers.flags.CF;
+                const CF = registers.flags.CF;
                 const offset = flagJmp(insLoc, CF, 0);
                 opCodeBytes += 1;
 
@@ -723,7 +1228,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x74: {
                 // JE, JZ
-                const ZF = foreign.registers.flags.ZF;
+                const ZF = registers.flags.ZF;
                 const offset = flagJmp(insLoc, ZF, ZF);
                 opCodeBytes += 1;
 
@@ -732,7 +1237,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x75: {
                 // JNE, JNZ
-                const ZF = foreign.registers.flags.ZF;
+                const ZF = registers.flags.ZF;
                 const offset = flagJmp(insLoc, ZF, 0);
                 opCodeBytes += 1;
 
@@ -741,7 +1246,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x76: {
                 // JBE, JNA
-                const flags = foreign.registers.flags.CF | foreign.registers.flags.ZF;
+                const flags = registers.flags.CF | registers.flags.ZF;
                 const offset = flagJmp(insLoc, flags, flags);
                 opCodeBytes += 1;
 
@@ -750,7 +1255,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x77: {
                 // JNBE, JA
-                const flags = foreign.registers.flags.CF | foreign.registers.flags.ZF;
+                const flags = registers.flags.CF | registers.flags.ZF;
                 const offset = flagJmp(insLoc, flags, 0);
                 opCodeBytes += 1;
 
@@ -759,7 +1264,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x78: {
                 // JS
-                const SF = foreign.registers.flags.SF;
+                const SF = registers.flags.SF;
                 const offset = flagJmp(insLoc, SF, SF);
                 opCodeBytes += 1;
 
@@ -768,7 +1273,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x79: {
                 // JNS
-                const SF = foreign.registers.flags.SF;
+                const SF = registers.flags.SF;
                 const offset = flagJmp(insLoc, SF, 0);
                 opCodeBytes += 1;
 
@@ -777,7 +1282,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x7A: {
                 // JP/JPE
-                const PF = foreign.registers.flags.PF;
+                const PF = registers.flags.PF;
                 const offset = flagJmp(insLoc, PF, PF);
                 opCodeBytes += 1;
 
@@ -786,7 +1291,7 @@ function Instructions (stdlib, foreign, heap) {
             }
             case 0x7B: {
                 // JNP/ JPO
-                const PF = foreign.registers.flags.PF;
+                const PF = registers.flags.PF;
                 const offset = flagJmp(insLoc, PF, 0);
                 opCodeBytes += 1;
 
@@ -806,8 +1311,8 @@ function Instructions (stdlib, foreign, heap) {
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = foreign.registers.reg8.lookup(memReg);
-                const regName = foreign.registers.reg8.lookup(reg);
+                const memRegName = registers.reg8.lookup(memReg);
+                const regName = registers.reg8.lookup(reg);
 
                 if ((mem ^ 0b11000000) !== 0) {
                     foreign.error(opCode, " ", modRM, " ", regName, " ", memRegName, " Memory lookup not supported");
@@ -815,13 +1320,13 @@ function Instructions (stdlib, foreign, heap) {
                 }
 
                 if (opCode === 0x88) {
-                    const regValue = foreign.registers.getGeneral8Bit(reg);
-                    foreign.registers.setGeneral8Bit(memReg, regValue);
+                    const regValue = registers.getGeneral8Bit(reg);
+                    registers.setGeneral8Bit(memReg, regValue);
 
                     foreign.log("MOV ", memRegName, ", ", regName);
                 } else if (opCode === 0x8A) {
-                    const memRegValue = foreign.registers.getGeneral8Bit(memReg);
-                    foreign.registers.setGeneral8Bit(reg, memRegValue);
+                    const memRegValue = registers.getGeneral8Bit(memReg);
+                    registers.setGeneral8Bit(reg, memRegValue);
 
                     foreign.log("MOV ", regName, ", ", memRegName);
                 } else {
@@ -843,8 +1348,8 @@ function Instructions (stdlib, foreign, heap) {
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = foreign.registers.reg16.lookup(memReg);
-                const regName = foreign.registers.reg16.lookup(reg);
+                const memRegName = registers.reg16.lookup(memReg);
+                const regName = registers.reg16.lookup(reg);
 
                 if ((mem ^ 0b11000000) !== 0) {
                     foreign.error(opCode, " ", modRM, " ", regName, " ", memRegName, " Memory lookup not supported");
@@ -852,13 +1357,13 @@ function Instructions (stdlib, foreign, heap) {
                 }
 
                 if (opCode === 0x89) {
-                    const regValue = foreign.registers.getGeneral16Bit(reg);
-                    foreign.registers.setGeneral16Bit(memReg, regValue);
+                    const regValue = registers.getGeneral16Bit(reg);
+                    registers.setGeneral16Bit(memReg, regValue);
 
                     foreign.log("MOV ", memRegName, ", ", regName);
                 } else if (opCode === 0x8B) {
-                    const memRegValue = foreign.registers.getGeneral16Bit(memReg);
-                    foreign.registers.setGeneral16Bit(reg, memRegValue);
+                    const memRegValue = registers.getGeneral16Bit(memReg);
+                    registers.setGeneral16Bit(reg, memRegValue);
 
                     foreign.log("MOV ", regName, ", ", memRegName);
                 } else {
@@ -878,8 +1383,8 @@ function Instructions (stdlib, foreign, heap) {
                 const segReg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = foreign.registers.reg16.lookup(memReg);
-                const segRegName = foreign.registers.seg16.lookup(segReg);
+                const memRegName = registers.reg16.lookup(memReg);
+                const segRegName = registers.seg16.lookup(segReg);
 
                 if ((mem ^ 0b11000000) !== 0) {
                     foreign.error(opCode, " ", modRM, " ", segRegName, " ", memRegName, " Memory lookup not supported");
@@ -887,13 +1392,13 @@ function Instructions (stdlib, foreign, heap) {
                 }
 
                 if (opCode === 0x8C) {
-                    const segRegValue = foreign.registers.getSegment16Bit(segReg);
-                    foreign.registers.setGeneral16Bit(memReg, segRegValue);
+                    const segRegValue = registers.getSegment16Bit(segReg);
+                    registers.setGeneral16Bit(memReg, segRegValue);
 
                     foreign.log("MOV ", memRegName, ", ", segRegName);
                 } else if (opCode === 0x8E) {
-                    const memRegValue = foreign.registers.getGeneral16Bit(memReg);
-                    foreign.registers.setSegment16Bit(segReg, memRegValue);
+                    const memRegValue = registers.getGeneral16Bit(memReg);
+                    registers.setSegment16Bit(segReg, memRegValue);
 
                     foreign.log("MOV ", segRegName, ", ", memRegName);
                 } else {
@@ -906,22 +1411,22 @@ function Instructions (stdlib, foreign, heap) {
                 // SAHF
 
                 // get AH value
-                const AH = foreign.registers.getGeneral8Bit(foreign.registers.reg8.AH) | 0;
+                const AH = registers.getGeneral8Bit(registers.reg8.AH) | 0;
                 // get flags that they will be combined with (high part of value)
-                const flags = foreign.registers.getFlags() & 0b1111111100000000;
+                const flags = registers.getFlags() & 0b1111111100000000;
 
                 // Ensure always off and always on values are correct and combine with high part of flags
                 const result = AH & 0b11010101 | flags;
 
-                foreign.registers.setFlags(result);
+                registers.setFlags(result);
 
                 foreign.log("SAHF (", AH.toString(2), ")");
                 break;
             }
             case 0x9F: {
                 // LAHF
-                const flags = foreign.registers.getFlags() & 0b11111111;
-                foreign.registers.setGeneral8Bit(foreign.registers.reg8.AH, flags);
+                const flags = registers.getFlags() & 0b11111111;
+                registers.setGeneral8Bit(registers.reg8.AH, flags);
 
                 foreign.log("LAHF (", flags.toString(2), ")");
                 break;
@@ -940,13 +1445,12 @@ function Instructions (stdlib, foreign, heap) {
                 opCodeBytes += 1;
 
                 const reg = opCode & 0b0111;
-                foreign.registers.setGeneral8Bit(reg, imm);
+                registers.setGeneral8Bit(reg, imm);
 
-                const regStr = foreign.registers.reg8.lookup(reg);
+                const regStr = registers.reg8.lookup(reg);
                 foreign.log("MOV ", regStr, ", ", imm);
                 break;
             }
-
             case 0xB8:
             case 0xB9:
             case 0xBA:
@@ -960,10 +1464,64 @@ function Instructions (stdlib, foreign, heap) {
                 opCodeBytes += 2;
 
                 const reg = opCode & 0b0111;
-                foreign.registers.setGeneral16Bit(reg, imm);
+                registers.setGeneral16Bit(reg, imm);
 
-                const regStr = foreign.registers.reg16.lookup(reg);
+                const regStr = registers.reg16.lookup(reg);
                 foreign.log("MOV ", regStr, ", ", imm);
+                break;
+            }
+
+            case 0xC2:
+            case 0xC3: {
+                // RETN [imm16]
+                let imm = 0;
+                if ((opCode & 0b00000010) === 1) {
+                    imm = getImm(insLoc + 1, 16);
+                }
+                const sp = registers.getGeneral16Bit(registers.reg16.SP);
+                const ip = foreign.memory.read(16, sp);
+                imm = imm + 2;
+
+                // don't adjust opcode as we are relocating the IP reg
+                opCodeBytes = 0;
+                // set new IP value
+                registers.setInstructionPointer(ip);
+                // adjust sp by address and extra values (stack grows memory)
+                registers.setGeneral16Bit(registers.reg16.SP, sp + imm);
+
+                if ((opCode & 0b00000010) === 1) {
+                    foreign.log("RETN ", imm);
+                } else {
+                    foreign.log("RETN");
+                }
+                break;
+            }
+
+            case 0xCA:
+            case 0xCB: {
+                // RETF [imm16]
+                let imm = 0;
+                if ((opCode & 0b00000010) === 1) {
+                    imm = getImm(insLoc + 1, 16);
+                }
+                const sp = registers.getGeneral16Bit(registers.reg16.SP);
+                const ip = foreign.memory.read(16, sp);
+                const cs = foreign.memory.read(16, sp + 2);
+                imm = imm + 4;
+
+                // don't adjust opcode as we are relocating the IP reg
+                opCodeBytes = 0;
+                registers.setSegment16Bit(registers.seg16.CS, cs);
+                // set new IP value
+                registers.setInstructionPointer(ip);
+                // adjust sp by address and extra values (stack grows memory)
+                registers.setGeneral16Bit(registers.reg16.SP, sp + imm);
+
+                if ((opCode & 0b00000010) === 1) {
+                    foreign.log("RETF ", imm);
+                } else {
+                    foreign.log("RETF");
+                }
                 break;
             }
 
@@ -974,14 +1532,14 @@ function Instructions (stdlib, foreign, heap) {
                 const mem = modRM & 0b11000000;
                 const subOpCode = modRM & 0b00111000;
                 const reg = modRM & 0b00000111;
-                const regName = foreign.registers.reg8.lookup(reg);
+                const regName = registers.reg8.lookup(reg);
 
                 if ((mem ^ 0b11000000) !== 0) {
                     foreign.error(opCode, modRM, regName, "Memory lookup not supported");
                     return;
                 }
 
-                const regValue = foreign.registers.getGeneral8Bit(reg);
+                const regValue = registers.getGeneral8Bit(reg);
                 const shifterValue = 1;
 
                 switch (subOpCode) {
@@ -999,9 +1557,9 @@ function Instructions (stdlib, foreign, heap) {
                         break;
                     case 0x20:
                         const output = regValue << shifterValue;
-                        const carry = output & 0b100000000 > 8;
+                        const carry = output & 0b100000000 > 0;
 
-                        foreign.registers.setGeneral8Bit(reg, output);
+                        registers.setGeneral8Bit(reg, output);
                         setFlagsCOPSZ(regValue, output, carry);
 
                         foreign.log("SHL ", regName, ", 1");
@@ -1025,15 +1583,15 @@ function Instructions (stdlib, foreign, heap) {
                 const mem = modRM & 0b11000000;
                 const subOpCode = modRM & 0b00111000;
                 const reg = modRM & 0b00000111;
-                const regName = foreign.registers.reg8.lookup(reg);
+                const regName = registers.reg8.lookup(reg);
 
                 if ((mem ^ 0b11000000) !== 0) {
                     foreign.error(opCode, modRM, regName, "Memory lookup not supported");
                     return;
                 }
 
-                const regValue = foreign.registers.getGeneral8Bit(reg);
-                const shifterValue = foreign.registers.getGeneral8Bit(foreign.registers.reg8.CL);
+                const regValue = registers.getGeneral8Bit(reg);
+                const shifterValue = registers.getGeneral8Bit(registers.reg8.CL);
 
                 switch (subOpCode) {
                     case 0x00:
@@ -1051,7 +1609,7 @@ function Instructions (stdlib, foreign, heap) {
                     case 0x20: {
                         const output = regValue << shifterValue;
 
-                        foreign.registers.setGeneral8Bit(reg, output);
+                        registers.setGeneral8Bit(reg, output);
                         setFlagsCOPSZ(regValue, output);
 
                         foreign.log("SHL ", regName, ", CL");
@@ -1061,7 +1619,7 @@ function Instructions (stdlib, foreign, heap) {
                         const output = regValue >> shifterValue;
                         const carry = ((1 << shifterValue - 1) & regValue) >> (shifterValue - 1);
 
-                        foreign.registers.setGeneral8Bit(reg, output);
+                        registers.setGeneral8Bit(reg, output);
                         setFlagsCOPSZ(regValue, output, carry);
 
                         foreign.log("SHR ", regName, ", CL");
@@ -1077,23 +1635,102 @@ function Instructions (stdlib, foreign, heap) {
                 break;
             }
 
+            case 0xE0:
+                // LOOPNZ/LOOPNE rel8
+            case 0xE1:
+                // LOOPZ/LOOPE rel8
+            case 0xE2: {
+                // LOOP rel8
+                let cont = true;
+
+                if ((opCode & 0b010) === 0) {
+                    const zf = registers.getFlags() & registers.flags.ZF;
+                    // mask 0 bit (to distinct Z vs NZ, compare with ZF (moved into 0 bit)
+                    cont = (opCode & 0b01) === (zf >> 5);
+                }
+
+                const imm = getRel(insLoc + 1, 8);
+                opCodeBytes += 1;
+                const cx = registers.reg16.CX;
+                const cxVal = registers.getGeneral16Bit(cx) - 1;
+                registers.setGeneral16Bit(cx, cxVal);
+
+                if (cxVal !== 0 && cont) {
+                    registers.incInstructionPointer(imm);
+                }
+
+                switch (opCode & 0b011) {
+                    case 0x0:
+                        foreign.log("LOOPNZ/NE ", imm);
+                        break;
+                    case 0x1:
+                        foreign.log("LOOPZ/E ", imm);
+                        break;
+                    case 0x2:
+                        foreign.log("LOOP ", imm);
+                        break;
+                }
+
+                break;
+            }
+
+            case 0xE6: {
+                // OUT imm8, AL
+                const reg = registers.reg8.AL;
+                const data = registers.getGeneral8Bit(reg);
+                const imm = getImm(insLoc + 1, 8);
+                opCodeBytes += 1;
+
+                foreign.bus.write(8, imm, data);
+                foreign.log("OUT imm8, AX");
+                break;
+            }
+            case 0xE7: {
+                // OUT imm16, AX
+                const reg = registers.reg16.AX;
+                const data = registers.getGeneral16Bit(reg);
+                const imm = getImm(insLoc + 1, 8);
+                opCodeBytes += 1;
+
+                foreign.bus.write(16, imm, data);
+                foreign.log("OUT imm8, AX");
+                break;
+            }
+
             case 0xEB: {
                 // JMP
                 const offset = getRel(insLoc + 1, 8);
                 opCodeBytes += 1;
                 // move to new location
-                foreign.registers.incInstructionPointer(offset);
+                registers.incInstructionPointer(offset);
 
                 foreign.log("JMP ", offset);
                 break;
             }
 
-            case 0xFA:
-                // CLI
-                foreign.registers.clearInterruptFlag();
+            case 0xEE: {
+                // OUT DX, AL
+                const regData = registers.reg8.AL;
+                const data = registers.getGeneral8Bit(regData);
+                const regAddr = registers.reg16.DX;
+                const addr = registers.getGeneral16Bit(regAddr);
 
-                foreign.log("CLI");
+                foreign.bus.write(8, addr, data);
+                foreign.log("OUT DX, AL");
                 break;
+            }
+            case 0xEF: {
+                // OUT DX, AX
+                const reg = registers.reg16.AX;
+                const data = registers.getGeneral16Bit(reg);
+                const regAddr = registers.reg16.DX;
+                const addr = registers.getGeneral16Bit(regAddr);
+
+                foreign.bus.write(8, addr, data);
+                foreign.log("OUT DX, AX");
+                break;
+            }
+
 
             case 0xF4:
                 // keep the IP constant
@@ -1103,24 +1740,122 @@ function Instructions (stdlib, foreign, heap) {
 
             case 0xF8:
                 // CLC
-                foreign.registers.clearCarryFlag();
-
+                registers.clearCarryFlag();
                 foreign.log("CLC");
                 break;
             case 0xF9:
                 // STC
-                foreign.registers.setCarryFlag();
-
+                registers.setCarryFlag();
                 foreign.log("STC");
                 break;
+            case 0xFA:
+                // CLI
+                registers.clearInterruptFlag();
+                foreign.log("CLI");
+                break;
+            case 0xFB:
+                // STI
+                registers.setInterruptFlag();
+                foreign.log("STI");
+                break;
+            case 0xFC:
+                // CLD
+                registers.clearDirectionFlag();
+                foreign.log("CLD");
+                break;
+            case 0xFD:
+                // STD
+                registers.setDirectionFlag();
+                foreign.log("STD");
+                break;
+            case 0xFE: {
+                // INC/DEC r/m8
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
 
+                const mem = modRM & 0b11000000;
+                const subOpCode = modRM & 0b00111000;
+                const reg = modRM & 0b00000111;
+                const regName = registers.reg8.lookup(reg);
+
+                if ((mem ^ 0b11000000) !== 0) {
+                    foreign.error(opCode, modRM, regName, "Memory lookup not supported");
+                    return;
+                }
+
+                const regValue = registers.getGeneral8Bit(reg);
+                let newValue = 0;
+
+                // cpu ignores unmapped sub codes and treats and wraps around to match
+                switch (subOpCode & 0b00001000) {
+                    case 0x00:
+                        newValue = (regValue + 1) | 0;
+                        registers.setGeneral8Bit(reg, newValue);
+                        foreign.log("INC ", regName);
+                        break;
+                    case 0x08:
+                        newValue = (regValue - 1) | 0;
+                        registers.setGeneral8Bit(reg, newValue);
+                        foreign.log("DEC ", regName);
+                        break;
+                }
+                setFlagsOPSZ(regValue, newValue);
+                break;
+            }
+            case 0xFF: {
+                // INC/DEC r/m16, CALL/JMP r/m16, PUSH r/m16
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
+
+                const mem = modRM & 0b11000000;
+                const subOpCode = modRM & 0b00111000;
+                const reg = modRM & 0b00000111;
+                const regName = registers.reg16.lookup(reg);
+
+                if ((mem ^ 0b11000000) !== 0) {
+                    foreign.error(opCode, modRM, regName, "Memory lookup not supported");
+                    return;
+                }
+
+                const regValue = registers.getGeneral16Bit(reg);
+                let newValue = 0;
+
+                // cpu ignores unmapped sub codes and treats and wraps around to match
+                switch (subOpCode & 0b00111000) {
+                    case 0x00:
+                        newValue = (regValue + 1) | 0;
+                        registers.setGeneral8Bit(reg, newValue);
+                        setFlagsOPSZ(regValue, newValue);
+                        foreign.log("INC ", regName);
+                        break;
+                    case 0x08:
+                        newValue = (regValue - 1) | 0;
+                        registers.setGeneral8Bit(reg, newValue);
+                        setFlagsOPSZ(regValue, newValue);
+                        foreign.log("DEC ", regName);
+                        break;
+                    case 0x10:
+                    case 0x18:
+                        foreign.error("CALL ", regName);
+                        break;
+                    case 0x20:
+                    case 0x28:
+                        foreign.error("JMP", regName);
+                        break;
+                    case 0x30:
+                    case 0x38:
+                        foreign.error("PUSH");
+                        break;
+                }
+                break;
+            }
             default:
                 // Assume one byte instruction
                 foreign.error(insLoc.toString(16), " : ", opCode.toString(16), " : ", "Unknown instruction");
                 break;
         }
 
-        foreign.registers.incInstructionPointer(opCodeBytes);
+        registers.incInstructionPointer(opCodeBytes);
     }
 
     return {
@@ -1141,15 +1876,33 @@ function Bus (stdlib, foreign, heap) {
         address = address | 0;
         data = data | 0;
 
+        switch (bits) {
+            case 8:
+                memByte[address << 1] = data & 0b11111111;
+                memByte[address << 1 + 1] = 0b00000000;
+                break;
+            case 16:
+                memWord[address << 1] = data & 0b1111111111111111;
+                break;
+        }
     }
 
     function read(bits, address) {
         bits = bits | 0;
         address = address | 0;
 
+        switch (bits) {
+            case 8:
+                return memByte[address << 1] | 0;
+            case 16:
+                return memWord[address << 1] | 0;
+        }
     }
 
-    return {};
+    return {
+        write,
+        read
+    };
 }
 
 export function Test (biosBinary) {
@@ -1159,7 +1912,10 @@ export function Test (biosBinary) {
     const memoryData = new ArrayBuffer(Math.pow(2, 18));
     // Heap for memory mapped bios data
     const biosData = Uint8Array.from(biosBinary);
+    // Heap for bus, holds a 16 bit value at each address as a buffer between emulation parts
+    const busData = new ArrayBuffer(1024 * 2);
 
+    const bus = new Bus(window, {}, busData);
     const registers = new Registers(window, {}, registerData);
     const memory = new Memory(window, {}, memoryData);
     const bios = new Memory(window, {}, biosData);
@@ -1171,6 +1927,8 @@ export function Test (biosBinary) {
     function MappedMemory() {
         // Unknown location
         const noMemory = {
+            get: () => 0,
+            set: () => undefined,
             getByte: () => 0,
             getWord: () => 0,
             setByte: () => undefined,
@@ -1192,6 +1950,12 @@ export function Test (biosBinary) {
         }
 
         return {
+            get: (bits, loc) => {
+                return getBuffer(loc).get(loc);
+            },
+            set: (bits, loc, value) => {
+                return getBuffer(loc).set(loc);
+            },
             getByte: (loc) => {
                 return getBuffer(loc).getByte(loc);
             },
@@ -1210,10 +1974,11 @@ export function Test (biosBinary) {
     const logs = [];
     const errors = [];
     const addLog = (...log) => logs.push(log.join(""));
-    const addError = (...err) => errors.push(err.join(""));
+    const addErr = (...log) => logs.push("Error: " + log.join(""));
+    // const addError = (...err) => errors.push(err.join(""));
 
     const mappedMemory = new MappedMemory();
-    const cpu = new Instructions(window, {registers, memory: mappedMemory, log: addLog, error: addError}, null);
+    const cpu = new Instructions(window, {registers, memory: mappedMemory, bus, log: addLog, error: addErr}, null);
 
     // const logPosAndCode = () => {
     //     const IP = registers.getInstructionLocation();
@@ -1281,7 +2046,7 @@ function HardwarePIT8254 () {
     // PORT 0x42 -
     // PORT 0x43 -
     // Chip 2 - Not on 8086/88
-    // PORT 0x50 -
+    // PORT 0 -
     // PORT 0x51 -
     // PORT 0x52 -
     // PORT 0x53 -
