@@ -213,7 +213,7 @@ export default function App () {
                                 <Button href={url} label="Download Machine Code" download="code.com"/>
                             </Box>
                         </Tab>
-                        <Tab title="x86 Virtual Machine">
+                        <Tab title="8086 Virtual Machine">
                             <Box pad="medium">
                                 <EMU8086 bios={buffer}/>
                             </Box>

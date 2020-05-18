@@ -22,7 +22,6 @@ function Registers(stdlib, foreign, heap) {
     "use asm";
 
     // use heap as a the register file, access either as 8bit or 16bit values
-    const registerFile16Bit = new stdlib.Uint16Array(heap);
     const registerFile8Bit =  new stdlib.Uint8Array(heap);
 
     // register file layout matches bit codes of registers
@@ -103,7 +102,8 @@ function Registers(stdlib, foreign, heap) {
 
         bitCode = bitCode << 1; // Ensure 16bit between addresses
 
-        return registerFile16Bit[bitCode] | 0;
+        // return registerFile16Bit[bitCode] | 0;
+        return registerFile8Bit[bitCode] | (registerFile8Bit[bitCode + 1] << 8) | 0;
     }
 
     function setGeneral16Bit (bitCode, number) {
@@ -112,7 +112,9 @@ function Registers(stdlib, foreign, heap) {
 
         bitCode = bitCode << 1; // Ensure 16bit between addresses
 
-        registerFile16Bit[bitCode] = number;
+        // registerFile16Bit[bitCode] = number;
+        registerFile8Bit[bitCode] = number & 0b11111111;
+        registerFile8Bit[bitCode + 1] = number >> 8 & 0b11111111;
     }
 
     function getSegment16Bit (bitCode) {
@@ -754,8 +756,10 @@ function Instructions (stdlib, foreign, heap) {
                                 addr += registers.getGeneral(16, registers.reg16.BX);
                                 break;
                         }
+                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
                         memRegName = addr;
                         memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
                         break;
                     case 1:
                         // mem with 8 bit displacement
@@ -792,8 +796,10 @@ function Instructions (stdlib, foreign, heap) {
                                 addr += registers.getGeneral(16, registers.reg16.BX);
                                 break;
                         }
+                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
                         memRegName = addr;
                         memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
                         break;
                     case 2:
                         // mem with 16 bit displacement
@@ -830,8 +836,10 @@ function Instructions (stdlib, foreign, heap) {
                                 addr += registers.getGeneral(16, registers.reg16.BX);
                                 break;
                         }
+                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
                         memRegName = addr;
                         memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
                         break;
                     case 3:
                         // register
@@ -1478,9 +1486,11 @@ function Instructions (stdlib, foreign, heap) {
                 if ((opCode & 0b00000010) === 1) {
                     imm = getImm(insLoc + 1, 16);
                 }
+                const ss = registers.getSegment16Bit(registers.seg16.SS);
                 const sp = registers.getGeneral16Bit(registers.reg16.SP);
-                const ip = foreign.memory.read(16, sp);
+                const ip = foreign.memory.get(16, ss * 16 + sp);
                 imm = imm + 2;
+                foreign.log("Fetch value for IP ", ip);
 
                 // don't adjust opcode as we are relocating the IP reg
                 opCodeBytes = 0;
@@ -1504,10 +1514,13 @@ function Instructions (stdlib, foreign, heap) {
                 if ((opCode & 0b00000010) === 1) {
                     imm = getImm(insLoc + 1, 16);
                 }
+                const ss = registers.getSegment16Bit(registers.seg16.SS);
                 const sp = registers.getGeneral16Bit(registers.reg16.SP);
-                const ip = foreign.memory.read(16, sp);
-                const cs = foreign.memory.read(16, sp + 2);
+                const ip = foreign.memory.get(16, ss * 16 + sp);
+                const cs = foreign.memory.get(16, ss * 16 + sp + 2);
                 imm = imm + 4;
+                foreign.log("Fetch value for IP ", ip);
+                foreign.log("Fetch value for CS ", cs);
 
                 // don't adjust opcode as we are relocating the IP reg
                 opCodeBytes = 0;
@@ -1951,10 +1964,10 @@ export function Test (biosBinary) {
 
         return {
             get: (bits, loc) => {
-                return getBuffer(loc).get(loc);
+                return getBuffer(loc).get(bits, loc);
             },
             set: (bits, loc, value) => {
-                return getBuffer(loc).set(loc);
+                return getBuffer(loc).set(bits, loc, value);
             },
             getByte: (loc) => {
                 return getBuffer(loc).getByte(loc);

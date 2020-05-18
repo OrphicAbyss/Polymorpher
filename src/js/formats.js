@@ -79,7 +79,11 @@ class Format {
                     console.log(placeholder.position, `Error regenerating instruction: ${opcode.instruction.key} ${fixedOperands.join(", ")}`);
                 }
             } else {
-                this.binaryOutput[placeholder.position] = placeholder.instruction.toCode(...fixedOperands);
+                if (placeholder.instruction.toCode !== undefined) {
+                    this.binaryOutput[placeholder.position] = placeholder.instruction.toCode(...fixedOperands);
+                } else {
+                    console.log(placeholder.position, `Error regenerating instruction: ${placeholder.instruction.key} ${fixedOperands.join(", ")}`);
+                }
             }
         });
     }
