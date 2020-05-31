@@ -165,6 +165,10 @@ function Registers(stdlib, foreign, heap) {
         setGeneral16Bit(flags, val | Set);
     }
 
+    function isFlagSet (flag) {
+        return (flags & flag) !== 0;
+    }
+
     function clearInterruptFlag () {
         const value = getFlags() | 0;
 
@@ -307,6 +311,7 @@ function Registers(stdlib, foreign, heap) {
         setSegment16Bit,
         getFlags,
         setFlags,
+        isFlagSet,
         clearInterruptFlag,
         setInterruptFlag,
         clearCarryFlag,
@@ -536,10 +541,10 @@ function Instructions (stdlib, foreign, heap) {
         registers.setFlags(flagState);
     }
 
-    function setFlagsACOPSZ (previous, result, carry) {
+    function setFlagsACOPSZ (bits, previous, result) {
+        bits = bits | 0;
         previous = previous | 0;
         result = result | 0;
-        carry = carry | 0;
 
         const flags = registers.flags;
         let flagState = registers.getFlags();
@@ -547,7 +552,7 @@ function Instructions (stdlib, foreign, heap) {
         let clearFlags = flags.All;
         let setFlags = 0;
 
-        if (carry === 0) {
+        if (result & (1 << bits) > 0) {
             clearFlags = clearFlags ^ flags.CF;
         } else {
             setFlags = setFlags | flags.CF;
@@ -680,6 +685,66 @@ function Instructions (stdlib, foreign, heap) {
 
         flagState = flagState & clearFlags | setFlags;
         registers.setFlags(flagState);
+    }
+
+    function insAdd (bits, destVal, srcVal) {
+        bits = bits | 0;
+        destVal = destVal | 0;
+        srcVal = srcVal | 0;
+
+        const output = destVal + srcVal;
+
+        setFlagsACOPSZ(bits, destVal, output);
+
+        return output | 0;
+    }
+
+    function insSub (bits, destVal, srcVal) {
+        bits = bits | 0;
+        destVal = destVal | 0;
+        srcVal = srcVal | 0;
+
+        const output = destVal - srcVal;
+
+        setFlagsACOPSZ(bits, destVal, output);
+
+        return output | 0;
+    }
+
+    function insAnd (bits, destVal, srcVal) {
+        bits = bits | 0;
+        destVal = destVal | 0;
+        srcVal = srcVal | 0;
+
+        const output = destVal & srcVal;
+
+        setFlags(output);
+
+        return output | 0;
+    }
+
+    function insOr (bits, destVal, srcVal) {
+        bits = bits | 0;
+        destVal = destVal | 0;
+        srcVal = srcVal | 0;
+
+        const output = destVal | srcVal;
+
+        setFlags(output);
+
+        return output | 0;
+    }
+
+    function insXor (bits, destVal, srcVal) {
+        bits = bits | 0;
+        destVal = destVal | 0;
+        srcVal = srcVal | 0;
+
+        const output = destVal ^ srcVal;
+
+        setFlags(output);
+
+        return output | 0;
     }
 
     function execute() {
@@ -849,14 +914,13 @@ function Instructions (stdlib, foreign, heap) {
                 }
 
                 const regValue = registers.getGeneral(bits, reg);
-                const result = memRegValue + regValue;
 
                 if (opCode === 0x00) {
-                    setFlagsACOPSZ(memRegValue, result);
+                    const result = insAdd(bits, memRegValue, regValue);
                     registers.setGeneral(bits, memReg, result);
                     foreign.log("ADD ", memRegName, ", ", regName);
                 } else if (opCode === 0x02) {
-                    setFlagsACOPSZ(regValue, result);
+                    const result = insAdd(bits, memRegValue, regValue);
                     registers.setGeneral(bits, reg, result);
                     foreign.log("ADD ", regName, ", ", memRegName);
                 } else {
@@ -865,36 +929,20 @@ function Instructions (stdlib, foreign, heap) {
 
                 break;
             }
-            case 0x04: {
+            case 0x04:
                 // Add AL, imm8
-                const imm = getImm(insLoc + 1, 8);
-                opCodeBytes += 1;
-                const reg = registers.reg8.AL;
-                const value = registers.getGeneral8Bit(reg);
-                const output = value + imm;
-                const carry = output & 0b100000000 > 0;
-
-                registers.setGeneral8Bit(reg, output);
-
-                setFlagsACOPSZ(value, output, carry);
-
-                foreign.log("ADD AL, ", imm);
-                break;
-            }
             case 0x05: {
                 // Add AX, imm16
-                const imm = getImm(insLoc + 1, 16);
-                opCodeBytes += 2;
-                const reg = registers.reg16.AX;
-                const value = registers.getGeneral16Bit(reg);
-                const output = value + imm;
-                const carry = output & 0b10000000000000000 > 0;
+                const bits = (opCode & 0b1) * 8 + 8;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
 
-                registers.setGeneral8Bit(reg, output);
+                const imm = getImm(insLoc + 1, bits);
+                opCodeBytes += bits / 8;
+                const value = registers.getGeneral(bits, reg);
+                const output = insAdd(bits, value, imm);
 
-                setFlagsACOPSZ(value, output, carry);
-
-                foreign.log("ADD AX, ", imm);
+                registers.setGeneral(bits, reg, output);
+                foreign.log(bits === 8 ? "ADD AL, " : "ADD AX, ", imm);
                 break;
             }
 
@@ -935,15 +983,16 @@ function Instructions (stdlib, foreign, heap) {
                 const memRegValue = registers.getGeneral(8, memReg);
                 const regValue = registers.getGeneral(8, reg);
 
-                const result = memRegValue | regValue;
-                setFlags(result);
+                let result;
 
                 switch (opCode & 0b010) {
                     case 0b00:
+                        result = insOr(bits, memRegValue, regValue);
                         registers.setGeneral(8, memReg, result);
                         foreign.log("OR ", memRegName, ", ", regName);
                         break;
                     case 0b10:
+                        result = insOr(bits, regValue, memRegValue);
                         registers.setGeneral(8, reg, result);
                         foreign.log("OR ", regName, ", ", memRegName);
                         break;
@@ -953,57 +1002,23 @@ function Instructions (stdlib, foreign, heap) {
 
                 break;
             }
-            case 0x0C: {
-                // OR AL, imm8
-                const imm = getImm(insLoc + 1, 8);
-                opCodeBytes += 1;
-                const reg = registers.reg8.AL;
-                const value = registers.getGeneral8Bit(reg);
-                const output = value | imm;
-
-                registers.setGeneral8Bit(reg, output);
-
-                setFlags(output);
-
-                foreign.log("OR AL, ", imm);
-                break;
-            }
+            case 0x0C:
+                // Or AL, imm8
             case 0x0D: {
-                // OR AX, imm16
-                const imm = getImm(insLoc + 1, 16);
-                opCodeBytes += 2;
-                const reg = registers.reg16.AX;
-                const value = registers.getGeneral16Bit(reg);
-                const output = value | imm;
+                // Or AX, imm16
+                const bits = (opCode & 0b1) * 8 + 8;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
 
-                registers.setGeneral8Bit(reg, output);
+                const imm = getImm(insLoc + 1, bits);
+                opCodeBytes += bits / 8;
+                const value = registers.getGeneral(bits, reg);
+                const output = insOr(bits, value, imm);
 
-                setFlags(output);
-
-                foreign.log("OR AX, ", imm);
+                registers.setGeneral(bits, reg, output);
+                foreign.log(bits === 8 ? "OR AL, " : "OR AX, ", imm);
                 break;
             }
 
-
-            // // OR
-            // case 0x08:
-            //     // Or r/m8, r8
-            //     break;
-            // case 0x09:
-            //     // Or r/m16, r16
-            //     break;
-            // case 0x0A:
-            //     // Or r8, r/m8
-            //     break;
-            // case 0x0B:
-            //     // Or r16, r/m16
-            //     break;
-            // case 0x0C:
-            //     // Or AL, d8
-            //     break;
-            // case 0x0D:
-            //     // Or AX, d16
-            //     break;
 
             // case 0x06:
             //     // Push ES
@@ -1073,6 +1088,271 @@ function Instructions (stdlib, foreign, heap) {
             //     // Pop DS
             //     break;
 
+            case 0x20:
+                // And r/m8, r8
+            case 0x21:
+                // And r/m16, r16
+            case 0x22:
+                // And r8, r/m8
+            case 0x23: {
+                // And r16, r/m16
+                let bits;
+
+                switch (opCode & 0b01) {
+                    case 0:
+                        bits = 8;
+                        break;
+                    case 1:
+                        bits = 16;
+                        break;
+                }
+
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
+
+                const mem = modRM & 0b11000000;
+                const reg = (modRM & 0b00111000) >> 3;
+                const memReg = modRM & 0b00000111;
+
+                let memRegName;
+                const regName = registers.lookup(bits, reg);
+
+                let memRegValue = 0;
+                let addr = 0;
+
+                switch (mem >> 6) {
+                    case 0:
+                        // mem no displacement
+                        switch (memReg) {
+                            case 0:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 1:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 2:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 3:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 4:
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 5:
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 6:
+                                // 16 bit displacement only
+                                addr += getRel(insLoc + 2, 16);
+                                opCodeBytes += 2;
+                                break;
+                            case 7:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                break;
+                        }
+                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 1:
+                        // mem with 8 bit displacement
+                        addr = getRel(insLoc + 2, 8);
+                        opCodeBytes += 1;
+
+                        switch (memReg) {
+                            case 0:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 1:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 2:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 3:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 4:
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 5:
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 6:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                break;
+                            case 7:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                break;
+                        }
+                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 2:
+                        // mem with 16 bit displacement
+                        addr = getRel(insLoc + 2, 16);
+                        opCodeBytes += 2;
+
+                        switch (memReg) {
+                            case 0:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 1:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 2:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 3:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 4:
+                                addr += registers.getGeneral(16, registers.reg16.SI);
+                                break;
+                            case 5:
+                                addr += registers.getGeneral(16, registers.reg16.DI);
+                                break;
+                            case 6:
+                                addr += registers.getGeneral(16, registers.reg16.BP);
+                                break;
+                            case 7:
+                                addr += registers.getGeneral(16, registers.reg16.BX);
+                                break;
+                        }
+                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 3:
+                        // register
+                        memRegName = registers.lookup(bits, memReg);
+                        memRegValue = registers.getGeneral(bits, memReg);
+                        break;
+                }
+
+                const regValue = registers.getGeneral(bits, reg);
+
+                if (opCode === 0x20) {
+                    const result = insAnd(bits, memRegValue, regValue);
+                    registers.setGeneral(bits, memReg, result);
+                    foreign.log("AND ", memRegName, ", ", regName);
+                } else if (opCode === 0x22) {
+                    const result = insAnd(bits, memRegValue, regValue);
+                    registers.setGeneral(bits, reg, result);
+                    foreign.log("AND ", regName, ", ", memRegName);
+                } else {
+                    foreign.error("Invalid opcode being handled by 00/02 handler: ", opCode);
+                }
+
+                break;
+            }
+            case 0x24:
+                // And AL, imm8
+            case 0x25: {
+                // And AX, imm16
+                const bits = (opCode & 0b1) * 8 + 8;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
+
+                const imm = getImm(insLoc + 1, bits);
+                opCodeBytes += bits / 8;
+                const value = registers.getGeneral(bits, reg);
+                const output = insAnd(bits, value, imm);
+
+                registers.setGeneral(bits, reg, output);
+                foreign.log(bits === 8 ? "AND AL, " : "AND AX, ", imm);
+                break;
+            }
+
+            case 0x28:
+            // OR r/m8, r8
+            case 0x29:
+            // OR r/m16, r16
+            case 0x2A:
+            // OR r8, r/m8
+            case 0x2B: {
+                // OR r16, r/m16
+                let bits;
+
+                switch (opCode & 0b01) {
+                    case 0:
+                        bits = 8;
+                        break;
+                    case 1:
+                        bits = 16;
+                        break;
+                }
+
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
+
+                const mem = modRM & 0b11000000;
+                const reg = (modRM & 0b00111000) >> 3;
+                const memReg = modRM & 0b00000111;
+
+                const memRegName = registers.lookup(bits, memReg);
+                const regName = registers.lookup(bits ,reg);
+
+                if ((mem ^ 0b11000000) !== 0) {
+                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
+                    return;
+                }
+
+                const memRegValue = registers.getGeneral(8, memReg);
+                const regValue = registers.getGeneral(8, reg);
+
+                let result;
+
+                switch (opCode & 0b010) {
+                    case 0b00:
+                        result = insSub(bits, memRegValue, regValue);
+                        registers.setGeneral(8, memReg, result);
+                        foreign.log("SUB ", memRegName, ", ", regName);
+                        break;
+                    case 0b10:
+                        result = insSub(bits, regValue, memRegValue);
+                        registers.setGeneral(8, reg, result);
+                        foreign.log("SUB ", regName, ", ", memRegName);
+                        break;
+                    default:
+                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
+                }
+
+                break;
+            }
+            case 0x2C:
+                // Sub AL, imm8
+            case 0x2D: {
+                // Sub AX, imm16
+                const bits = (opCode & 0b1) * 8 + 8;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
+
+                const imm = getImm(insLoc + 1, bits);
+                opCodeBytes += bits / 8;
+                const value = registers.getGeneral(bits, reg);
+                const output = insSub(bits, value, imm);
+
+                registers.setGeneral(bits, reg, output);
+                foreign.log(bits === 8 ? "SUB AL, " : "SUB AX, ", imm);
+                break;
+            }
+
             case 0x30:
                 // XOR r/m8, r8
             case 0x31:
@@ -1110,15 +1390,16 @@ function Instructions (stdlib, foreign, heap) {
                 const memRegValue = registers.getGeneral(bits, memReg);
                 const regValue = registers.getGeneral(bits, reg);
 
-                const result = memRegValue ^ regValue;
-                setFlags(result);
+                let result;
 
                 switch (opCode & 0b010) {
                     case 0b00:
+                        result = insXor(bits, memRegValue, regValue)
                         registers.setGeneral(bits, memReg, result);
                         foreign.log("XOR ", memRegName, ", ", regName);
                         break;
                     case 0b10:
+                        result = insXor(bits, regValue, memRegValue);
                         registers.setGeneral(bits, reg, result);
                         foreign.log("XOR ", regName, ", ", memRegName);
                         break;
@@ -1128,34 +1409,89 @@ function Instructions (stdlib, foreign, heap) {
 
                 break;
             }
-            case 0x34: {
-                // Add AL, imm8
-                const imm = getImm(insLoc + 1, 8);
-                opCodeBytes += 1;
-                const reg = registers.reg8.AL;
-                const value = registers.getGeneral(8, reg);
-                const output = value ^ imm;
+            case 0x34:
+                // XOR AL, imm8
+            case 0x35: {
+                // XOR AX, imm16
+                const bits = (opCode & 0b1) * 8 + 8;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
 
-                registers.setGeneral(8, reg, output);
+                const imm = getImm(insLoc + 1, bits);
+                opCodeBytes += bits / 8;
+                const value = registers.getGeneral(bits, reg);
+                const output = insXor(bits, value, imm);
 
-                setFlags(output);
-
-                foreign.log("XOR AL, ", imm);
+                registers.setGeneral(bits, reg, output);
+                foreign.log(bits === 8 ? "XOR AL, " : "XOR AX, ", imm);
                 break;
             }
-            case 0x35: {
-                // Add AX, imm16
-                const imm = getImm(insLoc + 1, 16);
-                opCodeBytes += 2;
-                const reg = registers.reg16.AX;
-                const value = registers.getGeneral(16, reg);
-                const output = value ^ imm;
 
-                registers.setGeneral(16, reg, output);
+            case 0x38:
+            // OR r/m8, r8
+            case 0x39:
+            // OR r/m16, r16
+            case 0x3A:
+            // OR r8, r/m8
+            case 0x3B: {
+                // OR r16, r/m16
+                let bits;
 
-                setFlags(output);
+                switch (opCode & 0b01) {
+                    case 0:
+                        bits = 8;
+                        break;
+                    case 1:
+                        bits = 16;
+                        break;
+                }
 
-                foreign.log("XOR AX, ", imm);
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
+
+                const mem = modRM & 0b11000000;
+                const reg = (modRM & 0b00111000) >> 3;
+                const memReg = modRM & 0b00000111;
+
+                const memRegName = registers.lookup(bits, memReg);
+                const regName = registers.lookup(bits ,reg);
+
+                if ((mem ^ 0b11000000) !== 0) {
+                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
+                    return;
+                }
+
+                const memRegValue = registers.getGeneral(8, memReg);
+                const regValue = registers.getGeneral(8, reg);
+                let result;
+
+                switch (opCode & 0b010) {
+                    case 0b00:
+                        result = insSub(bits, memRegValue, regValue);
+                        foreign.log("CMP ", memRegName, ", ", regName);
+                        break;
+                    case 0b10:
+                        result = insSub(bits, regValue, memRegValue);
+                        foreign.log("CMP ", regName, ", ", memRegName);
+                        break;
+                    default:
+                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
+                }
+
+                break;
+            }
+            case 0x3C:
+            // Or AL, imm8
+            case 0x3D: {
+                // Or AX, imm16
+                const bits = (opCode & 0b1) * 8 + 8;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
+
+                const imm = getImm(insLoc + 1, bits);
+                opCodeBytes += bits / 8;
+                const value = registers.getGeneral(bits, reg);
+                const output = insSub(bits, value, imm);
+
+                foreign.log(bits === 8 ? "CMP AL, " : "CMP AX, ", imm);
                 break;
             }
 
@@ -1307,6 +1643,113 @@ function Instructions (stdlib, foreign, heap) {
                 break;
             }
 
+            case 0x80:
+                // ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r/m8, imm8
+            case 0x81:
+                // ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r/m16, imm16
+            case 0x83:
+                // ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r/m16, imm8
+                {
+
+                const modRM = getModRM(insLoc + 1);
+                opCodeBytes += 1;
+
+                const mem = modRM & 0b11000000;
+                const subOpCode = modRM & 0b00111000;
+                const reg = modRM & 0b00000111;
+
+                let regName;
+                let bits;
+                let imm;
+
+                switch (opCode) {
+                    case 0x80:
+                        regName = registers.reg8.lookup(reg);
+                        imm = getImm(insLoc + 2, 8);
+                        opCodeBytes += 1;
+                        bits = 8;
+                        break;
+                    case 0x81:
+                        regName = registers.reg16.lookup(reg);
+                        imm = getImm(insLoc + 2, 16);
+                        opCodeBytes += 2;
+                        bits = 16;
+                        break;
+                    case 0x83:
+                        regName = registers.reg16.lookup(reg);
+                        imm = getImm(insLoc + 2, 8);
+                        opCodeBytes += 1;
+                        bits = 16;
+                        break;
+                    default:
+                        foreign.error("Unsupported opcode in 80, 81, 83. ", opCode);
+                        return;
+                }
+
+
+                if ((mem ^ 0b11000000) !== 0) {
+                    foreign.error(opCode, modRM, regName, "Memory lookup not supported");
+                    return;
+                }
+
+                const regValue = registers.getGeneral(bits, reg);
+                let result;
+                let carry;
+
+                switch (subOpCode) {
+                    case 0x00:
+                        result = insAdd(bits, regValue, imm);
+
+                        registers.setGeneral(bits, reg, result);
+
+                        foreign.log("ADD  ", regName, ", ", imm);
+                        break;
+                    case 0x08:
+                        result = regValue | imm;
+
+                        foreign.error("OR ", regName, ", ", imm);
+                        return;
+                    case 0x10:
+                        carry = registers.isFlagSet(registers.flags.CF);
+                        result = insAdd(bits, regValue, imm + (carry ? 1 : 0));
+
+                        registers.setGeneral(bits, reg, result);
+
+                        foreign.log("ADC ", regName, ", ", imm);
+                        break;
+                    case 0x18:
+                        carry = registers.isFlagSet(registers.flags.CF);
+                        result = regValue - imm - (carry ? 1 : 0);
+
+                        foreign.error("SBB ", regName, ", ", imm);
+                        return;
+                    case 0x20:
+                        result = regValue & imm;
+
+                        foreign.error("AND ", regName, ", ", imm);
+                        return;
+                    case 0x28:
+                        result = insSub(bits, regValue, imm);
+
+                        registers.setGeneral(bits, reg, result);
+
+                        foreign.log("SUB ", regName, ", ", imm);
+                        break;
+                    case 0x30:
+                        result = regValue ^ imm;
+
+                        foreign.error("XOR ", regName, ", ", imm);
+                        return;
+                    case 0x38:
+                        result = insSub(bits, regValue, imm);
+                        // Calculate flags but don't save result
+
+                        foreign.log("CMP ", regName, ", ", imm);
+                        break;
+                }
+                break;
+            }
+
             case 0x88:
                 // MOV r/m8, r8
             case 0x8A: {
@@ -1412,6 +1855,12 @@ function Instructions (stdlib, foreign, heap) {
                 } else {
                     foreign.error("Invalid opcode being handled by 8C/8E handler: ", opCode);
                 }
+                break;
+            }
+
+            case 0x90: {
+                // NOP
+                foreign.log("NOP");
                 break;
             }
 
@@ -1558,16 +2007,16 @@ function Instructions (stdlib, foreign, heap) {
                 switch (subOpCode) {
                     case 0x00:
                         foreign.error("ROL  ", regName, ", 1");
-                        break;
+                        return;
                     case 0x08:
                         foreign.error("ROR ", regName, ", 1");
-                        break;
+                        return;
                     case 0x10:
                         foreign.error("RCL ", regName, ", 1");
-                        break;
+                        return;
                     case 0x18:
                         foreign.error("RCR ", regName, ", 1");
-                        break;
+                        return;
                     case 0x20:
                         const output = regValue << shifterValue;
                         const carry = output & 0b100000000 > 0;
@@ -1579,13 +2028,13 @@ function Instructions (stdlib, foreign, heap) {
                         break;
                     case 0x28:
                         foreign.error("SHR ", regName, ", 1");
-                        break;
+                        return;
                     case 0x30:
                         foreign.error("SAL ", regName, ", 1");
-                        break;
+                        return;
                     case 0x38:
                         foreign.error("SAR ", regName, ", 1");
-                        break;
+                        return;
                 }
                 break;
             }
@@ -1609,16 +2058,16 @@ function Instructions (stdlib, foreign, heap) {
                 switch (subOpCode) {
                     case 0x00:
                         foreign.error("ROL ", regName, ", CL");
-                        break;
+                        return;
                     case 0x08:
                         foreign.error("ROR ", regName, ", CL");
-                        break;
+                        return;
                     case 0x10:
                         foreign.error("RCL ", regName, ", CL");
-                        break;
+                        return;
                     case 0x18:
                         foreign.error("RCR ", regName, ", CL");
-                        break;
+                        return;
                     case 0x20: {
                         const output = regValue << shifterValue;
 
@@ -1640,10 +2089,10 @@ function Instructions (stdlib, foreign, heap) {
                     }
                     case 0x30:
                         foreign.error("SAL ", regName, ", CL");
-                        break;
+                        return;
                     case 0x38:
                         foreign.error("SAR ", regName, ", CL");
-                        break;
+                        return;
                 }
                 break;
             }
@@ -1686,27 +2135,32 @@ function Instructions (stdlib, foreign, heap) {
 
                 break;
             }
-
-            case 0xE6: {
-                // OUT imm8, AL
-                const reg = registers.reg8.AL;
-                const data = registers.getGeneral8Bit(reg);
+            case 0xE4:
+                // OUT imm16, AL
+            case 0xE5: {
+                // OUT imm16, AX
+                const bits = (opCode & 0b1) === 0 ? 8 : 16;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
                 const imm = getImm(insLoc + 1, 8);
                 opCodeBytes += 1;
 
-                foreign.bus.write(8, imm, data);
-                foreign.log("OUT imm8, AX");
+                const data = foreign.bus.read(bits, imm);
+                registers.setGeneral(bits, reg, data);
+                foreign.log("OUT imm8, ", bits === 8 ? "AL" : "AX");
                 break;
             }
+            case 0xE6:
+                // OUT imm8, AL
             case 0xE7: {
                 // OUT imm16, AX
-                const reg = registers.reg16.AX;
-                const data = registers.getGeneral16Bit(reg);
+                const bits = (opCode & 0b1) === 0 ? 8 : 16;
+                const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
+                const data = registers.getGeneral(bits, reg);
                 const imm = getImm(insLoc + 1, 8);
                 opCodeBytes += 1;
 
-                foreign.bus.write(16, imm, data);
-                foreign.log("OUT imm8, AX");
+                foreign.bus.write(bits, imm, data);
+                foreign.log("OUT imm8, ", bits === 8 ? "AL" : "AX");
                 break;
             }
 
@@ -1850,15 +2304,15 @@ function Instructions (stdlib, foreign, heap) {
                     case 0x10:
                     case 0x18:
                         foreign.error("CALL ", regName);
-                        break;
+                        return;
                     case 0x20:
                     case 0x28:
                         foreign.error("JMP", regName);
-                        break;
+                        return;
                     case 0x30:
                     case 0x38:
                         foreign.error("PUSH");
-                        break;
+                        return;
                 }
                 break;
             }
@@ -1882,33 +2336,33 @@ function Bus (stdlib, foreign, heap) {
     "use asm";
 
     const memByte = new stdlib.Int8Array(heap);
-    const memWord = new stdlib.Int16Array(heap);
 
-    function write(bits, address, data) {
+    function write(bits, addr, data) {
         bits = bits | 0;
-        address = address | 0;
+        addr = addr | 0;
         data = data | 0;
 
         switch (bits) {
             case 8:
-                memByte[address << 1] = data & 0b11111111;
-                memByte[address << 1 + 1] = 0b00000000;
+                memByte[addr] = data & 0b11111111;
+                // memByte[address + 1] = 0b00000000;
                 break;
             case 16:
-                memWord[address << 1] = data & 0b1111111111111111;
+                memByte[addr] = data & 0b11111111;
+                memByte[addr + 1] = data >> 8;
                 break;
         }
     }
 
-    function read(bits, address) {
+    function read(bits, addr) {
         bits = bits | 0;
-        address = address | 0;
+        addr = addr | 0;
 
         switch (bits) {
             case 8:
-                return memByte[address << 1] | 0;
+                return memByte[addr] | (memByte[addr + 1] << 8) | 0;
             case 16:
-                return memWord[address << 1] | 0;
+                return memByte[addr] | 0;
         }
     }
 
@@ -2011,7 +2465,8 @@ export function Test (biosBinary) {
         errors,
         cpu,
         registers,
-        memory: mappedMemory
+        memory: mappedMemory,
+        bus
     };
 }
 

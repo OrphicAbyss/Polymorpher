@@ -14,6 +14,10 @@ export class Directive {
     toString () {
         return `Directive (${this.key})`;
     }
+
+    toCode () {
+        return "";
+    }
 }
 
 export class FormatDirective extends Directive {
@@ -99,5 +103,6 @@ export const directives = [
     new ReserveDataDirective("RP", "Reserve Pointer", 48),
     new ReserveDataDirective("RF", "Reserve Far Pointer", 48),
     new ReserveDataDirective("RQ", "Reserve Quad Word", 64),
-    new ReserveDataDirective("RT", "Reserve FPU Double", 80)
+    new ReserveDataDirective("RT", "Reserve FPU Double", 80),
+    new Directive("EQU", "Constant Value Placeholder", true)
 ];

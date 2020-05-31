@@ -9,7 +9,7 @@ class Format {
     constructor (name, addErrorFn) {
         this.name = name;
         this.addError = addErrorFn;
-        this.validDirectives = ["DB", "DW"];
+        this.validDirectives = ["EQU", "DB", "DW"];
         this.labels = [];
         this.placeholders = [];
         this.binaryOutput = [];

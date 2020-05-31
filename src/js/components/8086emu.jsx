@@ -18,7 +18,6 @@ import {FormNext} from "grommet-icons/icons/FormNext";
 import {Play} from "grommet-icons/icons/Play";
 import {Pause} from "grommet-icons/icons/Pause";
 
-
 import {Test} from "../8086-emu/8086.asm";
 
 
@@ -29,6 +28,7 @@ export function EMU8086 (props) {
     const [cpu, setCPU] = React.useState(null);
     const [registers, setRegisters] = React.useState(null);
     const [memory, setMemory] = React.useState(null);
+    const [bus, setBus] = React.useState(null);
     const [logs, setLogs] = React.useState(null);
     const [errors, setErrors] = React.useState(null);
 
@@ -36,16 +36,18 @@ export function EMU8086 (props) {
 
     const [registerTable, setRegTable] = React.useState([]);
     const [memoryTable, setMemTable] = React.useState([]);
+    const [busTable, setBusTable] = React.useState([]);
     const [flagTable, setFlagTable] = React.useState([]);
 
     const [emuOutput, setEMUOutput] = React.useState([]);
 
     const bios = props.bios;
 
-    const toHex = (val) => {
+    const toHex = (val, len) => {
+        len = len || 2;
         let out = (val | 0).toString(16).toUpperCase();
 
-        while ((out.length & (out.length - 1)) !== 0 || out.length < 2) {
+        while ((out.length & (out.length - 1)) !== 0 || out.length < len) {
             out = "0" + out;
         }
 
@@ -80,7 +82,7 @@ export function EMU8086 (props) {
                     regTab.push([reg, registers.getGeneral16Bit(registers.reg16[reg])]);
                 });
 
-            regTab.forEach((row) => row[1] = toHex(row[1]));
+            regTab.forEach((row) => row[1] = toHex(row[1], 4));
 
             setRegTable(regTab);
 
@@ -100,6 +102,12 @@ export function EMU8086 (props) {
     }, [registers, step]);
 
     React.useEffect(() => {
+        if (bus) {
+
+        }
+    }, [bus, step]);
+
+    React.useEffect(() => {
         if (memory && registers) {
             const location = registers.getInstructionLocation();
             const memTab = [];
@@ -108,7 +116,7 @@ export function EMU8086 (props) {
                 const loc = location + i;
                 const val = memory.getByte(loc);
 
-                memTab.push([toHex(loc), toHex(val)]);
+                memTab.push([toHex(loc), toHex(val), i===0]);
             }
 
             setMemTable(memTab);
@@ -127,6 +135,7 @@ export function EMU8086 (props) {
             setCPU(structures.cpu);
             setRegisters(structures.registers);
             setMemory(structures.memory);
+            setBus(structures.bus);
 
             setEMUOutput(["VM Started"]);
         } catch (e) {
@@ -217,7 +226,7 @@ export function EMU8086 (props) {
                     <TableBody>
                         {memoryTable.map((row, i) => {
                             return <TableRow key={i}>
-                                <TableCell>{row[0]}</TableCell>
+                                <TableCell>{!row[2] ? row[0] : <Box background={{color: "brand"}}>{row[0]}</Box>}</TableCell>
                                 <TableCell>{row[1]}</TableCell>
                             </TableRow>;
                         })}
