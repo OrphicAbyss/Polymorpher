@@ -5,7 +5,7 @@ import React from "react";
 import {Box} from "grommet/components/Box";
 import {DataTable} from "grommet/components/DataTable";
 import {Text} from "grommet/components/Text";
-import {instructions} from "../instruction";
+import {instructions} from "../assembler/instruction";
 import {Heading} from "grommet/components/Heading";
 import {ModalLayer} from "./layer";
 

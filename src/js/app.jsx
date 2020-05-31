@@ -22,10 +22,10 @@ import {List as ListIcon} from "grommet-icons/icons/List";
 import {Table} from "grommet-icons/icons/Table";
 import {schemeCategory10} from "d3-scale-chromatic";
 
-import {scanCode} from "./scanner";
-import {tokenise} from "./tokeniser";
-import {parse} from "./parser";
-import {assemble} from "./assemble";
+import {scanCode} from "./assembler/scanner";
+import {tokenise} from "./assembler/tokeniser";
+import {parse} from "./assembler/parser";
+import {assemble} from "./assembler/assemble";
 import {FS} from "./file_store";
 
 import {InstructionLayer, OpCodeLayer} from "./components/instruction_table";
@@ -34,8 +34,6 @@ import {Editor} from "./components/editor";
 import {Files} from "./components/files";
 import {EmulatorDetails} from "./components/emu_details";
 
-import {Test} from "./8086-emu/8086.asm"
-import {TextArea} from "grommet";
 import {EMU8086} from "./components/8086emu";
 
 const colourCodes = {};
@@ -96,35 +94,60 @@ export default function App () {
         setCode(text);
     }
 
-    // TODO: Move assemble step to effect hook
-    // React.useEffect(() => {
-    //
-    // }, [code])
-    const timeStart = new Date();
+    const [asmState, setAsmState] = React.useState({
+        lexemes: [],
+        tokens: [],
+        parsed: [],
+        assembled: {errors: [], binaryOutput: [], formattedBin: []},
+        buffer: [],
+        url: ""
+    });
 
-    const lexemes = scanCode(code);
-    console.log(lexemes);
-    const timeScanning = new Date();
+    React.useEffect(() => {
+        const timeStart = new Date();
 
-    const tokens = tokenise(lexemes);
-    console.log(tokens);
-    const timeTokenise = new Date();
+        const lexemes = scanCode(code);
+        console.log(lexemes);
+        const timeScanning = new Date();
 
-    const parsed = parse(tokens);
-    console.log(parsed);
-    const timeParsed = new Date();
+        const tokens = tokenise(lexemes);
+        console.log(tokens);
+        const timeTokenise = new Date();
 
-    const assembled = assemble(parsed);
-    console.log(assembled);
-    const timeAssembled = new Date();
+        const parsed = parse(tokens);
+        console.log(parsed);
+        const timeParsed = new Date();
 
-    const binary = assembled.binaryOutput.join("");
-    const buffer = [];
-    for (let i = 0; i < binary.length; i += 8) {
-        buffer.push(parseInt(binary.substr(i, 8), 2));
-    }
-    const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
-    const url = URL.createObjectURL(blob);
+        const assembled = assemble(parsed);
+        console.log(assembled);
+        const timeAssembled = new Date();
+
+        const binary = assembled.binaryOutput.join("");
+        const buffer = [];
+        for (let i = 0; i < binary.length; i += 8) {
+            buffer.push(parseInt(binary.substr(i, 8), 2));
+        }
+        const blob = new Blob([new Uint8Array(buffer)], {type: "application/binary"});
+        const url = URL.createObjectURL(blob);
+
+        setAsmState({
+            lexemes,
+            tokens,
+            parsed,
+            assembled,
+            buffer,
+            url
+        });
+    }, [code]);
+
+    const {
+        lexemes,
+        tokens,
+        parsed,
+        assembled,
+        buffer,
+        url
+    } = asmState;
 
     const [tabIndex, setTabIndex] = React.useState();
     const tabNames = ["Code", "Tokens", "Parsed", "Binary", "Formatted Binary", "x86 Virtual Machine"];
