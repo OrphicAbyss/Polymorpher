@@ -65,6 +65,18 @@ export function parse (tokens) {
     const getNext = () => tokens[++position];
     const lookNext = () => tokens[position + 1];
     const statements = [];
+    const constants = {};
+
+    const replaceConstant = (token) => {
+        if (token instanceof Label) {
+            const constant = constants[token.label];
+
+            if (constant) {
+                return constant;
+            }
+        }
+        return token;
+    }
 
     while (tokens.length > position) {
         let token = tokens[position];
@@ -93,7 +105,7 @@ export function parse (tokens) {
         }
 
         if (token instanceof Directive) {
-            // directives should parse themselves instead
+            // TODO: ? directives should parse themselves instead
             statement.directive = token;
 
             token = getNext();
@@ -106,6 +118,16 @@ export function parse (tokens) {
                 if (token instanceof Comma || token instanceof Colon) {
                     token = getNext();
                 }
+            }
+
+            if (statement.directive.key === "EQU") {
+                if (statement.parameters.length !== 1) {
+                    console.log(`EQU Directive (${statement.labels.join(",")}): Too many parameters (${statement.parameters.join(",")})`);
+                }
+
+                statement.labels.forEach((label) => {
+                    constants[label.label] = statement.parameters[0];
+                });
             }
         } else if (token instanceof Prefix || token instanceof Instruction) {
             // TODO: support multiple Prefixes
@@ -126,6 +148,7 @@ export function parse (tokens) {
 
                         while (token instanceof Colon || token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
                             if (!(token instanceof Colon || token instanceof Plus)) {
+                                token = replaceConstant(token);
                                 memory.addToken(token);
                             }
                             token = getNext();
@@ -145,6 +168,7 @@ export function parse (tokens) {
 
                         while (token instanceof Colon || token instanceof Plus || token instanceof Register || token instanceof Immediate || token instanceof Label) {
                             if (!(token instanceof Colon || token instanceof Plus)) {
+                                token = replaceConstant(token);
                                 memory.addToken(token);
                             }
                             token = getNext();
@@ -167,11 +191,13 @@ export function parse (tokens) {
                                 break;
                             }
                             token = getNext();
+                            token = replaceConstant(token);
                             if (token instanceof Label) {
                                 token = new PlaceholderImmediate(token);
                             }
                             token.setBits(bits);
                         }
+                        token = replaceConstant(token);
                         if (token instanceof Label) {
                             token = new PlaceholderImmediate(token);
                         }
