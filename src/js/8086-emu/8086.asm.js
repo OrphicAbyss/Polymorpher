@@ -8,355 +8,7 @@
  */
 
 
-const numToHex = (num) => num.toString(16).toUpperCase();
-
-/**
- * Holds the register values and allows for getting/setting values
- *
- * @param stdlib
- * @param foreign
- * @param heap
- * @constructor
- */
-function Registers(stdlib, foreign, heap) {
-    "use asm";
-
-    // use heap as a the register file, access either as 8bit or 16bit values
-    const registerFile8Bit =  new stdlib.Uint8Array(heap);
-
-    // register file layout matches bit codes of registers
-    // General 8 bit
-    const AL = 0b000;
-    const CL = 0b001;
-    const DL = 0b010;
-    const BL = 0b011;
-    const AH = 0b100;
-    const CH = 0b101;
-    const DH = 0b110;
-    const BH = 0b111;
-    // General 16 bit
-    const AX = 0b000;
-    const CX = 0b001;
-    const DX = 0b010;
-    const BX = 0b011;
-    const SP = 0b100;
-    const BP = 0b101;
-    const SI = 0b110;
-    const DI = 0b111;
-    // Stack Registers are offset in reg file
-    const stackOffset = 0b1000;
-    const ES = 0b000;
-    const CS = 0b001;
-    const SS = 0b010;
-    const DS = 0b011;
-    // Instruction Pointer - set to _reset vector_ for boot
-    const IP = 0b1100;
-    // Flags
-    const Set= 0b1111000000000010;
-    const flags = 0b1101;
-
-    const CF = 0b0000000000000001;     // bit 0: Carry flag
-    const R1 = 0b0000000000000010;     // bit 1: reserved, always set
-    const PF = 0b0000000000000100;     // bit 2: Parity flag
-    const R2 = 0b0000000000001000;     // bit 3: reserved, always clear
-    const AF = 0b0000000000010000;     // bit 4: Auxiliary Carry flag (aka Arithmetic flag)
-    const R3 = 0b0000000000100000;     // bit 5: reserved, always clear
-    const ZF = 0b0000000001000000;     // bit 6: Zero flag
-    const SF = 0b0000000010000000;     // bit 7: Sign flag
-    const TF = 0b0000000100000000;     // bit 8: Trap flag
-    const IF = 0b0000001000000000;     // bit 9: Interrupt flag
-    const DF = 0b0000010000000000;     // bit 10: Direction flag
-    const OF = 0b0000100000000000;     // bit 11: Overflow flag
-    const I1 = 0b0001000000000000;     // bits 12-13: I/O Privilege Level (always set on 8086/80186; clear on 80286 reset)
-    const I2 = 0b0010000000000000;     // bits 12-13: I/O Privilege Level (always set on 8086/80186; clear on 80286 reset)0000_
-    const NT = 0b0100000000000000;     // bit 14: Nested Task flag (always set on 8086/80186; clear on 80286 reset)
-    const R4 = 0b1000000000000000;     // bit 15: reserved (always set on 8086/80186; clear otherwise)
-    const All= 0b1111111111111111;
-
-
-    function getGeneral8Bit (bitCode) {
-        bitCode = bitCode | 0;
-
-        const high = (bitCode & 0b100) >> 2;
-        const low = (bitCode & 0b011) << 1;
-
-        bitCode = high | low;
-
-        return registerFile8Bit[bitCode] | 0;
-    }
-
-    function setGeneral8Bit (bitCode, number) {
-        bitCode = bitCode | 0;
-        number = number | 0;
-
-        const high = (bitCode & 0b100) >> 2;
-        const low = (bitCode & 0b011) << 1;
-
-        bitCode = high | low;
-
-        registerFile8Bit[bitCode] = number;
-    }
-
-    function getGeneral16Bit (bitCode) {
-        bitCode = bitCode | 0;
-
-        bitCode = bitCode << 1; // Ensure 16bit between addresses
-
-        // return registerFile16Bit[bitCode] | 0;
-        return registerFile8Bit[bitCode] | (registerFile8Bit[bitCode + 1] << 8) | 0;
-    }
-
-    function setGeneral16Bit (bitCode, number) {
-        bitCode = bitCode | 0;
-        number = number | 0;
-
-        bitCode = bitCode << 1; // Ensure 16bit between addresses
-
-        // registerFile16Bit[bitCode] = number;
-        registerFile8Bit[bitCode] = number & 0b11111111;
-        registerFile8Bit[bitCode + 1] = number >> 8 & 0b11111111;
-    }
-
-    function getSegment16Bit (bitCode) {
-        bitCode = bitCode | 0;
-
-        bitCode = stackOffset | bitCode;
-
-        return getGeneral16Bit(bitCode) | 0;
-    }
-
-    function setSegment16Bit (bitCode, number) {
-        bitCode = bitCode | 0;
-        number = number | 0;
-
-        bitCode = stackOffset | bitCode;
-
-        setGeneral16Bit(bitCode, number);
-    }
-
-    function getInstructionPointer () {
-        return getGeneral16Bit(IP) | 0;
-    }
-
-    function setInstructionPointer (offset) {
-        offset = offset | 0;
-
-        setGeneral16Bit(IP, offset);
-    }
-
-    function incInstructionPointer (bytes) {
-        bytes = bytes | 0;
-
-        const value = getInstructionPointer();
-        setInstructionPointer(value + bytes);
-    }
-
-    function getInstructionLocation () {
-        return (getSegment16Bit(CS) * 16 + getInstructionPointer()) | 0;
-    }
-
-    function getFlags () {
-        return getGeneral16Bit(flags);
-    }
-
-    function setFlags (val) {
-        val = val | 0;
-
-        setGeneral16Bit(flags, val | Set);
-    }
-
-    function isFlagSet (flag) {
-        return (flags & flag) !== 0;
-    }
-
-    function clearInterruptFlag () {
-        const value = getFlags() | 0;
-
-        setFlags(value & (All ^ IF));
-    }
-
-    function setInterruptFlag () {
-        const value = getFlags() | 0;
-
-        setFlags(value | IF);
-    }
-
-    function clearCarryFlag () {
-        const value = getFlags() | 0;
-
-        setFlags(value & (All ^ CF));
-    }
-
-    function setCarryFlag () {
-        const value = getFlags() | 0;
-
-        setFlags(value | CF);
-    }
-
-    function clearDirectionFlag () {
-        const value = getFlags() | 0;
-
-        setFlags(value & (All ^ DF));
-    }
-
-    function setDirectionFlag () {
-        const value = getFlags() | 0;
-
-        setFlags(value | DF);
-    }
-
-    function lookup8bit(bitCode) {
-        bitCode = bitCode | 0;
-
-        switch (bitCode) {
-            case AL:
-                return "AL";
-            case CL:
-                return "CL";
-            case DL:
-                return "DL";
-            case BL:
-                return "BL";
-            case AH:
-                return "AH";
-            case CH:
-                return "CH";
-            case DH:
-                return "DH";
-            case BH:
-                return "BH";
-            default:
-                return "xx";
-        }
-    }
-
-    function lookup16bit(bitCode) {
-        bitCode = bitCode | 0;
-
-        switch (bitCode) {
-            case AX:
-                return "AX";
-            case CX:
-                return "CX";
-            case DX:
-                return "DX";
-            case BX:
-                return "BX";
-            case SP:
-                return "SP";
-            case BP:
-                return "BP";
-            case SI:
-                return "SI";
-            case DI:
-                return "DI";
-            default:
-                return "XX";
-        }
-    }
-
-    function lookup(bits, bitCode) {
-        bits = bits | 0;
-        bitCode = bitCode | 0;
-
-        switch (bits) {
-            case 8:
-                return lookup8bit(bitCode);
-            case 16:
-                return lookup16bit(bitCode);
-            default:
-                return "ZZ";
-        }
-    }
-
-    function getGeneral(bits, bitCode) {
-        bits = bits | 0;
-        bitCode = bitCode | 0;
-
-        switch (bits) {
-            case 8:
-                return getGeneral8Bit(bitCode);
-            case 16:
-                return getGeneral16Bit(bitCode);
-            default:
-                return -1;
-        }
-    }
-
-    function setGeneral(bits, bitCode, number) {
-        bits = bits | 0;
-        bitCode = bitCode | 0;
-
-        switch (bits) {
-            case 8:
-                return setGeneral8Bit(bitCode, number);
-            case 16:
-                return setGeneral16Bit(bitCode, number);
-            default:
-                return -1;
-        }
-    }
-
-    // Initialise flags
-    setFlags(Set);
-
-    return {
-        getGeneral,
-        setGeneral,
-        getGeneral8Bit,
-        setGeneral8Bit,
-        getGeneral16Bit,
-        setGeneral16Bit,
-        getSegment16Bit,
-        setSegment16Bit,
-        getFlags,
-        setFlags,
-        isFlagSet,
-        clearInterruptFlag,
-        setInterruptFlag,
-        clearCarryFlag,
-        setCarryFlag,
-        clearDirectionFlag,
-        setDirectionFlag,
-        getInstructionPointer,
-        setInstructionPointer,
-        incInstructionPointer,
-        getInstructionLocation,
-        lookup,
-        reg8: {
-            AL, CL, DL, BL,
-            AH, CH, DH, BH,
-            lookup: lookup8bit
-        },
-        reg16: {
-            AX, CX, DX, BX,
-            SP, BP, SI, DI,
-            lookup: lookup16bit
-        },
-        seg16: {
-            ES, CS, SS, DS,
-            lookup: (bit) => {
-                bit = bit | 0;
-
-                switch (bit) {
-                    case ES:
-                        return "ES";
-                    case CS:
-                        return "CS";
-                    case SS:
-                        return "SS";
-                    case DS:
-                        return "DS";
-                    default:
-                        return "XX";
-                }
-            }
-        },
-        flags: {
-            CF, PF, AF, ZF, SF, TF, IF, DF, OF, All
-        }
-    };
-}
+import Registers from "./8086.registers.asm";
 
 // TODO: handle memory mapped hardware (BIOS, Video data etc)
 function Memory (stdlib, foreign, heap) {
@@ -552,7 +204,7 @@ function Instructions (stdlib, foreign, heap) {
         let clearFlags = flags.All;
         let setFlags = 0;
 
-        if (result & (1 << bits) > 0) {
+        if ((result & (1 << bits)) > 0) {
             clearFlags = clearFlags ^ flags.CF;
         } else {
             setFlags = setFlags | flags.CF;
@@ -747,6 +399,66 @@ function Instructions (stdlib, foreign, heap) {
         return output | 0;
     }
 
+    /**
+     * Address lookup for register/memory operand
+     *
+     * NOTE: Calling code MUST handle displacement offset in case 6 for non-displacement 8 or 16
+     *
+     * @param memRegBits
+     * @param addressingMode
+     * @return {number}
+     */
+    function getAddress (memRegBits, addressingMode) {
+        memRegBits = memRegBits | 0;
+        addressingMode = addressingMode | 0;
+
+        // Start with data segment register value
+        let addr = registers.getSegment16Bit(registers.seg16.DS) * 16;
+
+        switch (memRegBits) {
+            case 0:
+                addr += registers.getGeneral(16, registers.reg16.BX);
+                addr += registers.getGeneral(16, registers.reg16.SI);
+                break;
+            case 1:
+                addr += registers.getGeneral(16, registers.reg16.BX);
+                addr += registers.getGeneral(16, registers.reg16.DI);
+                break;
+            case 2:
+                addr += registers.getGeneral(16, registers.reg16.BP);
+                addr += registers.getGeneral(16, registers.reg16.SI);
+                break;
+            case 3:
+                addr += registers.getGeneral(16, registers.reg16.BP);
+                addr += registers.getGeneral(16, registers.reg16.DI);
+                break;
+            case 4:
+                addr += registers.getGeneral(16, registers.reg16.SI);
+                break;
+            case 5:
+                addr += registers.getGeneral(16, registers.reg16.DI);
+                break;
+            case 6:
+                switch (addressingMode) {
+                    case 0:
+                        // 16 bit displacement only
+                        // NOTE: Not handled by this code
+                        break;
+                    case 1:
+                    case 2:
+                        addr += registers.getGeneral(16, registers.reg16.BP);
+                        break;
+                }
+
+                break;
+            case 7:
+                addr += registers.getGeneral(16, registers.reg16.BX);
+                break;
+        }
+
+        return addr | 0;
+    }
+
     function execute() {
         const insLoc = registers.getInstructionLocation() | 0;
         const opCode = foreign.memory.getByte(insLoc) | 0;
@@ -776,7 +488,7 @@ function Instructions (stdlib, foreign, heap) {
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
-                const mem = modRM & 0b11000000;
+                const memAddrMode = (modRM & 0b11000000) >> 6;
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
@@ -786,122 +498,23 @@ function Instructions (stdlib, foreign, heap) {
                 let memRegValue = 0;
                 let addr = 0;
 
-                switch (mem >> 6) {
+                switch (memAddrMode) {
+                    case 1:
+                    case 2:
+                        // mem with 8 / 16 bit displacement
+                        addr = getRel(insLoc + 2, 8 * memAddrMode);
+                        opCodeBytes += memAddrMode;
+                        // fall through to common code
                     case 0:
                         // mem no displacement
-                        switch (memReg) {
-                            case 0:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 1:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 2:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 3:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 4:
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 5:
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 6:
-                                // 16 bit displacement only
-                                addr += getRel(insLoc + 2, 16);
-                                opCodeBytes += 2;
-                                break;
-                            case 7:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                break;
-                        }
-                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
-                        memRegName = addr;
-                        memRegValue = foreign.memory.get(bits, addr);
-                        foreign.log("Fetch value ", memRegValue);
-                        break;
-                    case 1:
-                        // mem with 8 bit displacement
-                        addr = getRel(insLoc + 2, 8);
-                        opCodeBytes += 1;
+                        addr += getAddress(memReg, memAddrMode);
 
-                        switch (memReg) {
-                            case 0:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 1:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 2:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 3:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 4:
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 5:
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 6:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                break;
-                            case 7:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                break;
+                        // special case not handled by getAddress call
+                        if (memAddrMode === 0 && memReg === 6) {
+                            addr += getRel(insLoc + 2, 16);
+                            opCodeBytes += 2;
                         }
-                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
-                        memRegName = addr;
-                        memRegValue = foreign.memory.get(bits, addr);
-                        foreign.log("Fetch value ", memRegValue);
-                        break;
-                    case 2:
-                        // mem with 16 bit displacement
-                        addr = getRel(insLoc + 2, 16);
-                        opCodeBytes += 2;
 
-                        switch (memReg) {
-                            case 0:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 1:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 2:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 3:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 4:
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 5:
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 6:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                break;
-                            case 7:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                break;
-                        }
-                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
                         memRegName = addr;
                         memRegValue = foreign.memory.get(bits, addr);
                         foreign.log("Fetch value ", memRegValue);
@@ -915,18 +528,21 @@ function Instructions (stdlib, foreign, heap) {
 
                 const regValue = registers.getGeneral(bits, reg);
 
-                if (opCode === 0x00) {
-                    const result = insAdd(bits, memRegValue, regValue);
-                    registers.setGeneral(bits, memReg, result);
-                    foreign.log("ADD ", memRegName, ", ", regName);
-                } else if (opCode === 0x02) {
-                    const result = insAdd(bits, memRegValue, regValue);
-                    registers.setGeneral(bits, reg, result);
-                    foreign.log("ADD ", regName, ", ", memRegName);
-                } else {
-                    foreign.error("Invalid opcode being handled by 00/02 handler: ", opCode);
+                let result;
+                switch (opCode & 0b010) {
+                    case 0b00:
+                        result = insAdd(bits, memRegValue, regValue);
+                        registers.setGeneral(bits, memReg, result);
+                        foreign.log("ADD ", memRegName, ", ", regName);
+                        break;
+                    case 0b10:
+                        result = insAdd(bits, regValue, memRegValue);
+                        registers.setGeneral(bits, reg, result);
+                        foreign.log("ADD ", regName, ", ", memRegName);
+                        break;
+                    default:
+                        foreign.error("Invalid opcode being handled by 00/01/02/03 handler: ", opCode);
                 }
-
                 break;
             }
             case 0x04:
@@ -968,36 +584,60 @@ function Instructions (stdlib, foreign, heap) {
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
-                const mem = modRM & 0b11000000;
+                const memAddrMode = (modRM & 0b11000000) >> 6;
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = registers.lookup(bits, memReg);
-                const regName = registers.lookup(bits ,reg);
+                let memRegName;
+                const regName = registers.lookup(bits, reg);
 
-                if ((mem ^ 0b11000000) !== 0) {
-                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
-                    return;
+                let memRegValue = 0;
+                let addr = 0;
+
+                switch (memAddrMode) {
+                    case 1:
+                    case 2:
+                        // mem with 8 / 16 bit displacement
+                        addr = getRel(insLoc + 2, 8 * memAddrMode);
+                        opCodeBytes += memAddrMode;
+                    // fall through to common code
+                    case 0:
+                        // mem no displacement
+                        addr += getAddress(memReg, memAddrMode);
+
+                        // special case not handled by getAddress call
+                        if (memAddrMode === 0 && memReg === 6) {
+                            addr += getRel(insLoc + 2, 16);
+                            opCodeBytes += 2;
+                        }
+
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 3:
+                        // register
+                        memRegName = registers.lookup(bits, memReg);
+                        memRegValue = registers.getGeneral(bits, memReg);
+                        break;
                 }
 
-                const memRegValue = registers.getGeneral(8, memReg);
-                const regValue = registers.getGeneral(8, reg);
+                const regValue = registers.getGeneral(bits, reg);
 
                 let result;
-
                 switch (opCode & 0b010) {
                     case 0b00:
                         result = insOr(bits, memRegValue, regValue);
-                        registers.setGeneral(8, memReg, result);
+                        registers.setGeneral(bits, memReg, result);
                         foreign.log("OR ", memRegName, ", ", regName);
                         break;
                     case 0b10:
                         result = insOr(bits, regValue, memRegValue);
-                        registers.setGeneral(8, reg, result);
+                        registers.setGeneral(bits, reg, result);
                         foreign.log("OR ", regName, ", ", memRegName);
                         break;
                     default:
-                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
+                        foreign.error("Invalid opcode being handled by 08/09/0A/0B handler: ", opCode);
                 }
 
                 break;
@@ -1110,7 +750,7 @@ function Instructions (stdlib, foreign, heap) {
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
-                const mem = modRM & 0b11000000;
+                const memAddrMode = (modRM & 0b11000000) >> 6;
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
@@ -1120,122 +760,23 @@ function Instructions (stdlib, foreign, heap) {
                 let memRegValue = 0;
                 let addr = 0;
 
-                switch (mem >> 6) {
+                switch (memAddrMode) {
+                    case 1:
+                    case 2:
+                        // mem with 8 / 16 bit displacement
+                        addr = getRel(insLoc + 2, 8 * memAddrMode);
+                        opCodeBytes += memAddrMode;
+                    // fall through to common code
                     case 0:
                         // mem no displacement
-                        switch (memReg) {
-                            case 0:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 1:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 2:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 3:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 4:
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 5:
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 6:
-                                // 16 bit displacement only
-                                addr += getRel(insLoc + 2, 16);
-                                opCodeBytes += 2;
-                                break;
-                            case 7:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                break;
-                        }
-                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
-                        memRegName = addr;
-                        memRegValue = foreign.memory.get(bits, addr);
-                        foreign.log("Fetch value ", memRegValue);
-                        break;
-                    case 1:
-                        // mem with 8 bit displacement
-                        addr = getRel(insLoc + 2, 8);
-                        opCodeBytes += 1;
+                        addr += getAddress(memReg, memAddrMode);
 
-                        switch (memReg) {
-                            case 0:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 1:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 2:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 3:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 4:
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 5:
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 6:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                break;
-                            case 7:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                break;
+                        // special case not handled by getAddress call
+                        if (memAddrMode === 0 && memReg === 6) {
+                            addr += getRel(insLoc + 2, 16);
+                            opCodeBytes += 2;
                         }
-                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
-                        memRegName = addr;
-                        memRegValue = foreign.memory.get(bits, addr);
-                        foreign.log("Fetch value ", memRegValue);
-                        break;
-                    case 2:
-                        // mem with 16 bit displacement
-                        addr = getRel(insLoc + 2, 16);
-                        opCodeBytes += 2;
 
-                        switch (memReg) {
-                            case 0:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 1:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 2:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 3:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 4:
-                                addr += registers.getGeneral(16, registers.reg16.SI);
-                                break;
-                            case 5:
-                                addr += registers.getGeneral(16, registers.reg16.DI);
-                                break;
-                            case 6:
-                                addr += registers.getGeneral(16, registers.reg16.BP);
-                                break;
-                            case 7:
-                                addr += registers.getGeneral(16, registers.reg16.BX);
-                                break;
-                        }
-                        addr += registers.getSegment16Bit(registers.seg16.DS) * 16;
                         memRegName = addr;
                         memRegValue = foreign.memory.get(bits, addr);
                         foreign.log("Fetch value ", memRegValue);
@@ -1258,7 +799,7 @@ function Instructions (stdlib, foreign, heap) {
                     registers.setGeneral(bits, reg, result);
                     foreign.log("AND ", regName, ", ", memRegName);
                 } else {
-                    foreign.error("Invalid opcode being handled by 00/02 handler: ", opCode);
+                    foreign.error("Invalid opcode being handled by 20/21/22/23 handler: ", opCode);
                 }
 
                 break;
@@ -1281,11 +822,11 @@ function Instructions (stdlib, foreign, heap) {
             }
 
             case 0x28:
-            // OR r/m8, r8
+            // Sub r/m8, r8
             case 0x29:
-            // OR r/m16, r16
+            // Sub r/m16, r16
             case 0x2A:
-            // OR r8, r/m8
+            // Sub r8, r/m8
             case 0x2B: {
                 // OR r16, r/m16
                 let bits;
@@ -1302,36 +843,61 @@ function Instructions (stdlib, foreign, heap) {
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
-                const mem = modRM & 0b11000000;
+                const memAddrMode = (modRM & 0b11000000) >> 6;
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = registers.lookup(bits, memReg);
-                const regName = registers.lookup(bits ,reg);
+                let memRegName;
+                const regName = registers.lookup(bits, reg);
 
-                if ((mem ^ 0b11000000) !== 0) {
-                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
-                    return;
+                let memRegValue = 0;
+                let addr = 0;
+
+                switch (memAddrMode) {
+                    case 1:
+                    case 2:
+                        // mem with 8 / 16 bit displacement
+                        addr = getRel(insLoc + 2, 8 * memAddrMode);
+                        opCodeBytes += memAddrMode;
+                    // fall through to common code
+                    case 0:
+                        // mem no displacement
+                        addr += getAddress(memReg, memAddrMode);
+
+                        // special case not handled by getAddress call
+                        if (memAddrMode === 0 && memReg === 6) {
+                            addr += getRel(insLoc + 2, 16);
+                            opCodeBytes += 2;
+                        }
+
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 3:
+                        // register
+                        memRegName = registers.lookup(bits, memReg);
+                        memRegValue = registers.getGeneral(bits, memReg);
+                        break;
                 }
 
-                const memRegValue = registers.getGeneral(8, memReg);
-                const regValue = registers.getGeneral(8, reg);
+                const regValue = registers.getGeneral(bits, reg);
 
                 let result;
 
                 switch (opCode & 0b010) {
                     case 0b00:
                         result = insSub(bits, memRegValue, regValue);
-                        registers.setGeneral(8, memReg, result);
+                        registers.setGeneral(bits, memReg, result);
                         foreign.log("SUB ", memRegName, ", ", regName);
                         break;
                     case 0b10:
                         result = insSub(bits, regValue, memRegValue);
-                        registers.setGeneral(8, reg, result);
+                        registers.setGeneral(bits, reg, result);
                         foreign.log("SUB ", regName, ", ", memRegName);
                         break;
                     default:
-                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
+                        foreign.error("Invalid opcode being handled by 28/29/2A/2B handler: ", opCode);
                 }
 
                 break;
@@ -1375,19 +941,44 @@ function Instructions (stdlib, foreign, heap) {
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
-                const mem = modRM & 0b11000000;
+                const memAddrMode = (modRM & 0b11000000) >> 6;
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = registers.lookup(bits, memReg);
+                let memRegName;
                 const regName = registers.lookup(bits, reg);
 
-                if ((mem ^ 0b11000000) !== 0) {
-                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
-                    return;
+                let memRegValue = 0;
+                let addr = 0;
+
+                switch (memAddrMode) {
+                    case 1:
+                    case 2:
+                        // mem with 8 / 16 bit displacement
+                        addr = getRel(insLoc + 2, 8 * memAddrMode);
+                        opCodeBytes += memAddrMode;
+                    // fall through to common code
+                    case 0:
+                        // mem no displacement
+                        addr += getAddress(memReg, memAddrMode);
+
+                        // special case not handled by getAddress call
+                        if (memAddrMode === 0 && memReg === 6) {
+                            addr += getRel(insLoc + 2, 16);
+                            opCodeBytes += 2;
+                        }
+
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 3:
+                        // register
+                        memRegName = registers.lookup(bits, memReg);
+                        memRegValue = registers.getGeneral(bits, memReg);
+                        break;
                 }
 
-                const memRegValue = registers.getGeneral(bits, memReg);
                 const regValue = registers.getGeneral(bits, reg);
 
                 let result;
@@ -1448,20 +1039,46 @@ function Instructions (stdlib, foreign, heap) {
                 const modRM = getModRM(insLoc + 1);
                 opCodeBytes += 1;
 
-                const mem = modRM & 0b11000000;
+                const memAddrMode = (modRM & 0b11000000) >> 6;
                 const reg = (modRM & 0b00111000) >> 3;
                 const memReg = modRM & 0b00000111;
 
-                const memRegName = registers.lookup(bits, memReg);
-                const regName = registers.lookup(bits ,reg);
+                let memRegName;
+                const regName = registers.lookup(bits, reg);
 
-                if ((mem ^ 0b11000000) !== 0) {
-                    foreign.error(opCode.toString(16), " ", modRM, " ", regName, " ", memRegName, "Memory lookup not supported");
-                    return;
+                let memRegValue = 0;
+                let addr = 0;
+
+                switch (memAddrMode) {
+                    case 1:
+                    case 2:
+                        // mem with 8 / 16 bit displacement
+                        addr = getRel(insLoc + 2, 8 * memAddrMode);
+                        opCodeBytes += memAddrMode;
+                    // fall through to common code
+                    case 0:
+                        // mem no displacement
+                        addr += getAddress(memReg, memAddrMode);
+
+                        // special case not handled by getAddress call
+                        if (memAddrMode === 0 && memReg === 6) {
+                            addr += getRel(insLoc + 2, 16);
+                            opCodeBytes += 2;
+                        }
+
+                        memRegName = addr;
+                        memRegValue = foreign.memory.get(bits, addr);
+                        foreign.log("Fetch value ", memRegValue);
+                        break;
+                    case 3:
+                        // register
+                        memRegName = registers.lookup(bits, memReg);
+                        memRegValue = registers.getGeneral(bits, memReg);
+                        break;
                 }
 
-                const memRegValue = registers.getGeneral(8, memReg);
-                const regValue = registers.getGeneral(8, reg);
+                const regValue = registers.getGeneral(bits, reg);
+
                 let result;
 
                 switch (opCode & 0b010) {
@@ -1474,7 +1091,7 @@ function Instructions (stdlib, foreign, heap) {
                         foreign.log("CMP ", regName, ", ", memRegName);
                         break;
                     default:
-                        foreign.error("Invalid opcode being handled by 30/31/32/33 handler: ", opCode);
+                        foreign.error("Invalid opcode being handled by 38/39/3A/3B handler: ", opCode);
                 }
 
                 break;
@@ -2471,54 +2088,7 @@ export function Test (biosBinary) {
 }
 
 
-//
-// Initial 8254 superset of the 8253 and has a higher clock speed ratings
-//
-//
-//
 
-
-
-/**
- * Intel 8253 & 8254 - Programmable Interrupt Timers used by early x86 computers
- *
- * They have 3 timers per chip and have 6 different modes for each timer.
- *
- * Historically Chip 1 manages the following
- * 0. Interrupt timer for time measurements in OS
- * 1. Timer for refreshing DRAM
- * 2. Timer for playing sounds on the PC speaker
- *
- * Mode 0 (000): Interrupt on terminal count
- * Mode 1 (001): programmable one shot
- * Mode 2 (X10): rate generator
- * Mode 3 (X11): square wave generator
- * Mode 4 (100): Software Triggered Strobe
- * Mode 5 (101): Hardware Triggered Strobe
- *
- * Timer 1 - 18.2 hz (configurable)
- * 1. OS sets value (FFFFh) of timer on the chip
- * 2. Timer counts down to 0
- * 3. Timer sends interrupt
- * 4. OS response to interrupt
- * 5. OS increments data at 0040:006c
- * 6. Start step 1 again
- */
-function HardwarePIT8254 () {
-
-
-
-    // Chip 1
-    // PORT 0x40 -
-    // PORT 0x41 -
-    // PORT 0x42 -
-    // PORT 0x43 -
-    // Chip 2 - Not on 8086/88
-    // PORT 0 -
-    // PORT 0x51 -
-    // PORT 0x52 -
-    // PORT 0x53 -
-}
 
 /**
  * Intel 8259 - Programmable Interrupt Controller used by x86 computers
