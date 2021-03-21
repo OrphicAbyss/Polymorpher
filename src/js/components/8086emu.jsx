@@ -5,6 +5,7 @@ import React, {Fragment} from "react";
 import {Anchor} from "grommet/components/Anchor";
 import {Box} from "grommet/components/Box";
 import {Button} from "grommet/components/Button";
+import {Heading} from "grommet/components/Heading";
 import {Table} from "grommet/components/Table";
 import {TableBody} from "grommet/components/TableBody";
 import {TableHeader} from "grommet/components/TableHeader";
@@ -206,63 +207,89 @@ export function EMU8086 (props) {
         <Fragment>
             <Box direction="row">
                 {!cpu && <Button label="Start" onClick={() => reset()}/>}
-                {cpu && <Button label="Reset" onClick={() => reset()}/>}
-                {cpu && <Button label="Step" onClick={() => stepCPU()}/>}
-                {cpu && !cpuTimer && <Button label="Run" onClick={() => runCPU()}/>}
-                {cpu && !cpuTimer && <Button label="Run x2" onClick={() => runCPU(2)}/>}
-                {cpu && !cpuTimer && <Button label="Run x4" onClick={() => runCPU(4)}/>}
-                {cpu && cpuTimer && <Button label="Pause" onClick={() => pauseCPU()}/>}
+                {cpu && <Fragment>
+                    <Button label="Reset" onClick={() => reset()}/>
+                    <Button label="Step" onClick={() => stepCPU()}/>
+                    {!cpuTimer && <Fragment>
+                        <Button label="Run" onClick={() => runCPU()}/>
+                        <Button label="Run x2" onClick={() => runCPU(2)}/>
+                        <Button label="Run x4" onClick={() => runCPU(4)}/>
+                    </Fragment>}
+                    {cpuTimer && <Button label="Pause" onClick={() => pauseCPU()}/>}
+                </Fragment>}
                 {/*<Text>CPU Step: {step}</Text>*/}
             </Box>
             <Box direction="row" height="large">
-                <TextArea ref={textAreaRef} value={emuOutput.join("\n")} fill></TextArea>
+                <Box fill>
+                    <Heading level="3">History</Heading>
+                    <TextArea ref={textAreaRef} value={emuOutput.join("\n")} fill></TextArea>
+                </Box>
+                <Box width={{ min: 'small' }}>
+                    <Heading level="3">Memory</Heading>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableCell>Location</TableCell>
+                                <TableCell>Value</TableCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {memoryTable.map((row, i) => {
+                                return <TableRow key={i}>
+                                    <TableCell>{!row[2] ? row[0] : <Box background={{color: "brand"}}>{row[0]}</Box>}</TableCell>
+                                    <TableCell>{row[1]}</TableCell>
+                                </TableRow>;
+                            })}
+                        </TableBody>
+                    </Table>
+                </Box>
+                <Box width={{ min: 'small' }}>
+                    <Heading level="3">Registers</Heading>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableCell>Reg</TableCell>
+                                <TableCell>Value</TableCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {registerTable.map((row, i) => {
+                                return <TableRow key={i}>
+                                    <TableCell>{row[0]}</TableCell>
+                                    <TableCell>{row[1]}</TableCell>
+                                </TableRow>;
+                            })}
+                        </TableBody>
+                    </Table>
+                </Box>
+                <Box width={{ min: 'small' }}>
+                    <Heading level="3">Flags</Heading>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableCell>Flag</TableCell>
+                                <TableCell>Value</TableCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {flagTable.map((row, i) => {
+                                return <TableRow key={i}>
+                                    <TableCell>{row[0]}</TableCell>
+                                    <TableCell>{row[1]}</TableCell>
+                                </TableRow>;
+                            })}
+                        </TableBody>
+                    </Table>
+                </Box>
+            </Box>
+            <Box>
+                <Heading level="3">i8253 Data</Heading>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableCell>Location</TableCell>
-                            <TableCell>Value</TableCell>
+                            <TableCell></TableCell>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
-                        {memoryTable.map((row, i) => {
-                            return <TableRow key={i}>
-                                <TableCell>{!row[2] ? row[0] : <Box background={{color: "brand"}}>{row[0]}</Box>}</TableCell>
-                                <TableCell>{row[1]}</TableCell>
-                            </TableRow>;
-                        })}
-                    </TableBody>
-                </Table>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableCell>Reg</TableCell>
-                            <TableCell>Value</TableCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {registerTable.map((row, i) => {
-                            return <TableRow key={i}>
-                                <TableCell>{row[0]}</TableCell>
-                                <TableCell>{row[1]}</TableCell>
-                            </TableRow>;
-                        })}
-                    </TableBody>
-                </Table>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableCell>Flag</TableCell>
-                            <TableCell>Value</TableCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {flagTable.map((row, i) => {
-                            return <TableRow key={i}>
-                                <TableCell>{row[0]}</TableCell>
-                                <TableCell>{row[1]}</TableCell>
-                            </TableRow>;
-                        })}
-                    </TableBody>
                 </Table>
             </Box>
         </Fragment>

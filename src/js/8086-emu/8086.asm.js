@@ -9,6 +9,7 @@
 
 
 import Registers from "./8086.registers.asm";
+import {HardwarePIT8254} from "./chip.8253.asm";
 
 // TODO: handle memory mapped hardware (BIOS, Video data etc)
 function Memory (stdlib, foreign, heap) {
@@ -1753,9 +1754,9 @@ function Instructions (stdlib, foreign, heap) {
                 break;
             }
             case 0xE4:
-                // OUT imm16, AL
+                // IN imm8, AL
             case 0xE5: {
-                // OUT imm16, AX
+                // IN imm8, AX
                 const bits = (opCode & 0b1) === 0 ? 8 : 16;
                 const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
                 const imm = getImm(insLoc + 1, 8);
@@ -1763,13 +1764,13 @@ function Instructions (stdlib, foreign, heap) {
 
                 const data = foreign.bus.read(bits, imm);
                 registers.setGeneral(bits, reg, data);
-                foreign.log("OUT imm8, ", bits === 8 ? "AL" : "AX");
+                foreign.log("IN ", bits === 8 ? "AL" : "AX", ", ", imm);
                 break;
             }
             case 0xE6:
                 // OUT imm8, AL
             case 0xE7: {
-                // OUT imm16, AX
+                // OUT imm8, AX
                 const bits = (opCode & 0b1) === 0 ? 8 : 16;
                 const reg = bits === 8 ? registers.reg8.AL : registers.reg16.AX;
                 const data = registers.getGeneral(bits, reg);
@@ -1777,7 +1778,7 @@ function Instructions (stdlib, foreign, heap) {
                 opCodeBytes += 1;
 
                 foreign.bus.write(bits, imm, data);
-                foreign.log("OUT imm8, ", bits === 8 ? "AL" : "AX");
+                foreign.log("OUT ", imm, ", ", bits === 8 ? "AL" : "AX");
                 break;
             }
 
@@ -1999,7 +2000,13 @@ export function Test (biosBinary) {
     // Heap for bus, holds a 16 bit value at each address as a buffer between emulation parts
     const busData = new ArrayBuffer(1024 * 2);
 
+    const PIT8254Data = new ArrayBuffer(8 * 4);
+
     const bus = new Bus(window, {}, busData);
+    const pit = new HardwarePIT8254(window, {}, PIT8254Data);
+
+
+
     const registers = new Registers(window, {}, registerData);
     const memory = new Memory(window, {}, memoryData);
     const bios = new Memory(window, {}, biosData);
