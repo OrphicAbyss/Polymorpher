@@ -1,42 +1,30 @@
 "use strict";
 
 import {schemeTableau10} from "d3-scale-chromatic";
-import React from "react";
-import {Box} from "grommet/components/Box";
-import {DataTable} from "grommet/components/DataTable";
-import {Text} from "grommet/components/Text";
+import React, {Fragment} from "react";
 import {instructions} from "../assembler/instruction";
-import {Heading} from "grommet/components/Heading";
-import {ModalLayer} from "./layer";
+import {Modal} from "./ui-framework";
 
 export function InstructionTable (props) {
     return (
-        <DataTable
-            columns={[
-                {
-                    property: "key",
-                    header: <Text>Instruction</Text>,
-                    primary: true
-                },
-                {
-                    property: "name",
-                    header: <Text>Description</Text>
-                },
-                {
-                    property: "instruction",
-                    header: <Text>Instruction Format</Text>,
-                    render: datum => (datum.opcodes || [])
-                        .map((op, i) => <Box key={i}><Text>{datum.key} <i>{op.toInstructionString()}</i></Text></Box>)
-                },
-                {
-                    property: "opcodes",
-                    header: <Text>Op Code Hex Format</Text>,
-                    render: datum => (datum.opcodes || [])
-                        .map((op, i) => <Box key={i}><Text>{op.toOpCodeString()}</Text></Box>)
-                }
-            ]}
-            data={instructions}
-        />
+        <table width="100%">
+            <thead>
+            <tr>
+                <th>Instruction</th>
+                <th>Description</th>
+                <th>Instruction Format</th>
+                <th>Op Code Hex Format</th>
+            </tr>
+            </thead>
+            {instructions.map((row, i) => (
+                <tr key={"ins-"+i}>
+                    <td><b>{row["key"]}</b></td>
+                    <td>{row["name"]}</td>
+                    <td>{(row["opcodes"] || []).map((op, i) => <div key={"ins-for-"+i}>{row["key"]} <i>{op.toInstructionString()}</i></div>)}</td>
+                    <td>{(row["opcodes"] || []).map((op, i) => <div key={"ins-op-"+i}>{op.toOpCodeString()}</div>)}</td>
+                </tr>
+            ))}
+        </table>
     );
 }
 
@@ -79,6 +67,7 @@ subGroupKeys.sort();
 function OpCodeCell (props) {
     const code = props.code;
     const opCodeArray = allOpCodes[code];
+
     if (opCodeArray) {
         const opCode = opCodeArray[0];
         const instruction = opCode.instruction;
@@ -93,19 +82,24 @@ function OpCodeCell (props) {
 
         if (!group) {
             if (opCodeArray.every(op => op.operands.every((operand, i) => operand.equals(opCode.operands[i])))) {
-                return (<Box pad="xsmall" align="center" background={{color: color}}>
-                    <Text size="xsmall">{opCodeArray.map(op => op.instruction.key).join("/")}{"\u00A0"}{opCode.toInstructionString()}</Text>
-                </Box>);
+                return (<div align="center" style={{backgroundColor: color}}>
+                    {opCodeArray.map(op => op.instruction.key).join("/")}{"\u00A0"}{opCode.toInstructionString()}
+                </div>);
             } else {
-                return (<Box pad="xsmall" align="center" background={{color: color}}>
-                    {opCodeArray.map((op, i) => <Text key={i} size="xsmall">{op.instruction.key}{'\u00A0'}{op.toInstructionString()}</Text>)}
-                </Box>);
+                return (<div align="center" style={{backgroundColor: color}}>
+                    {opCodeArray[0].instruction.key}
+                    {opCodeArray
+                        .filter(op => op.toInstructionString().length > 0)
+                        .map((op) => (<Fragment>{"\u00A0"}[{op.toInstructionString()}]</Fragment>))}
+                </div>);
             }
         } else {
-            return <Box pad="xsmall" align="center" background={{color: color}}><Text size="xsmall">{'\u00A0'}</Text></Box>;
+            return (<div align="center" style={{backgroundColor: color}}>
+                {"\u00A0"}
+            </div>);
         }
     } else {
-        return <Box pad="xsmall" align="center"></Box>;
+        return <div align="center"/>;
     }
 }
 
@@ -122,16 +116,16 @@ function OpCodeWithSubCell (props) {
             const colorIndex = instruction.group ? groups.indexOf(instruction.group) : -1;
             const color = colorIndex !== -1 ? schemeTableau10[colorIndex] : undefined;
 
-            return (<Box pad="xsmall" align="center" background={{color: color}}>
-                {subCodeArray.map((op, i) => <Text size="xsmall" key={i}>{op.instruction.key}{'\u00A0'}{op.toInstructionString()}</Text>)}
-            </Box>);
+            return (<div align="center" style={{backgroundColor: color}}>
+                {subCodeArray.map((op, i) => <div key={i}>{op.instruction.key}{"\u00A0"}{op.toInstructionString()}</div>)}
+            </div>);
         }
     }
-    return <Box pad="xsmall" align="center"></Box>;
+    return <div align="center"/>;
 }
 
 function TabBox (props) {
-    return (<Box pad="xsmall" align="center"><Text size="xsmall">{props.children}</Text></Box>)
+    return (<div align="center">{props.children}</div>);
 }
 
 export function InstructionGrid (props) {
@@ -174,15 +168,18 @@ export function OpCodeLayer (props) {
     const close = props.close;
 
     return (
-        <ModalLayer title="8086 Opcodes & Sub-opcodes" isOpen={isOpen} close={close}>
-            <Box overflow="auto">
-                {/*<Heading level="2">8086 Op Code Table</Heading>*/}
-                <Box overflow="auto"><InstructionGrid/></Box>
-                {/*<Heading level="2">Sub Op Code Table</Heading>*/}
-                <Box><InstructionSubGrid/></Box>
-            </Box>
-        </ModalLayer>
-    )
+        <Fragment>
+            {isOpen && <Modal title="8086 Opcodes & Sub-opcodes" onClose={close}>
+                <div style={{"overflow": "auto"}}>
+                    {/*<Heading level="2">8086 Op Code Table</Heading>*/}
+                    <div style={{"overflow": "auto"}}><InstructionGrid/></div>
+                    {/*<Heading level="2">Sub Op Code Table</Heading>*/}
+                    <div style={{"overflow": "auto"}}><InstructionSubGrid/></div>
+                </div>
+            </Modal>}
+        </Fragment>
+
+    );
 }
 
 export function InstructionLayer (props) {
@@ -190,10 +187,10 @@ export function InstructionLayer (props) {
     const close = props.close;
 
     return (
-        <ModalLayer title="8086 Instruction List" isOpen={isOpen} close={close}>
-            <Box overflow="auto">
+        <Fragment>
+            {isOpen && <Modal title="8086 Instruction List" onClose={close}>
                 <InstructionTable/>
-            </Box>
-        </ModalLayer>
+            </Modal>}
+        </Fragment>
     );
 }

@@ -2,23 +2,6 @@
 
 import React, {Fragment} from "react";
 
-import {Anchor} from "grommet/components/Anchor";
-import {Box} from "grommet/components/Box";
-import {Button} from "grommet/components/Button";
-import {Heading} from "grommet/components/Heading";
-import {Table} from "grommet/components/Table";
-import {TableBody} from "grommet/components/TableBody";
-import {TableHeader} from "grommet/components/TableHeader";
-import {TableRow} from "grommet/components/TableRow";
-import {TableCell} from "grommet/components/TableCell";
-import {Text} from "grommet/components/Text";
-import {TextArea} from "grommet/components/TextArea";
-
-import {Connectivity} from "grommet-icons/icons/Connectivity";
-import {FormNext} from "grommet-icons/icons/FormNext";
-import {Play} from "grommet-icons/icons/Play";
-import {Pause} from "grommet-icons/icons/Pause";
-
 import {Test} from "../8086-emu/8086.asm";
 
 
@@ -205,93 +188,87 @@ export function EMU8086 (props) {
 
     return (
         <Fragment>
-            <Box direction="row">
-                {!cpu && <Button label="Start" onClick={() => reset()}/>}
+            <div className="fillScroll flexCol">
+            <div className="flexRow">
+                {!cpu && <button onClick={() => reset()}>Start</button>}
                 {cpu && <Fragment>
-                    <Button label="Reset" onClick={() => reset()}/>
-                    <Button label="Step" onClick={() => stepCPU()}/>
+                    <button onClick={() => reset()}>Reset</button>
+                    <button onClick={() => stepCPU()}>Step</button>
                     {!cpuTimer && <Fragment>
-                        <Button label="Run" onClick={() => runCPU()}/>
-                        <Button label="Run x2" onClick={() => runCPU(2)}/>
-                        <Button label="Run x4" onClick={() => runCPU(4)}/>
+                        <button onClick={() => runCPU()}>Run</button>
+                        <button onClick={() => runCPU(2)}>Run x2</button>
+                        <button onClick={() => runCPU(4)}>Run x4</button>
                     </Fragment>}
-                    {cpuTimer && <Button label="Pause" onClick={() => pauseCPU()}/>}
+                    {cpuTimer && <button label="" onClick={() => pauseCPU()}>Pause</button>}
                 </Fragment>}
                 {/*<Text>CPU Step: {step}</Text>*/}
-            </Box>
-            <Box direction="row" height="large">
-                <Box fill>
-                    <Heading level="3">History</Heading>
-                    <TextArea ref={textAreaRef} value={emuOutput.join("\n")} fill></TextArea>
-                </Box>
-                <Box width={{ min: 'small' }}>
-                    <Heading level="3">Memory</Heading>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableCell>Location</TableCell>
-                                <TableCell>Value</TableCell>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+            </div>
+            <div className="flexFill flexRow">
+                <div className="flexFill flexCol">
+                    <h3>History</h3>
+                    <textarea className="flexFill" ref={textAreaRef} value={emuOutput.join("\n")}></textarea>
+                </div>
+                <div className="flexRow">
+                    <div>
+                        <h3>Memory</h3>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
                             {memoryTable.map((row, i) => {
-                                return <TableRow key={i}>
-                                    <TableCell>{!row[2] ? row[0] : <Box background={{color: "brand"}}>{row[0]}</Box>}</TableCell>
-                                    <TableCell>{row[1]}</TableCell>
-                                </TableRow>;
+                                return <tr key={i}>
+                                    <td>{!row[2] ? row[0] : <b>{row[0]}</b>}</td>
+                                    <td>{!row[2] ? row[1] : <b>{row[1]}</b>}</td>
+                                </tr>;
                             })}
-                        </TableBody>
-                    </Table>
-                </Box>
-                <Box width={{ min: 'small' }}>
-                    <Heading level="3">Registers</Heading>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableCell>Reg</TableCell>
-                                <TableCell>Value</TableCell>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h3>Registers</h3>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Reg</th>
+                                <th>Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
                             {registerTable.map((row, i) => {
-                                return <TableRow key={i}>
-                                    <TableCell>{row[0]}</TableCell>
-                                    <TableCell>{row[1]}</TableCell>
-                                </TableRow>;
+                                return <tr key={i}>
+                                    <td>{row[0]}</td>
+                                    <td>{row[1]}</td>
+                                </tr>;
                             })}
-                        </TableBody>
-                    </Table>
-                </Box>
-                <Box width={{ min: 'small' }}>
-                    <Heading level="3">Flags</Heading>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableCell>Flag</TableCell>
-                                <TableCell>Value</TableCell>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h3>Flags</h3>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Flag</th>
+                                <th>Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
                             {flagTable.map((row, i) => {
-                                return <TableRow key={i}>
-                                    <TableCell>{row[0]}</TableCell>
-                                    <TableCell>{row[1]}</TableCell>
-                                </TableRow>;
+                                return <tr key={i}>
+                                    <td>{row[0]}</td>
+                                    <td>{row[1]}</td>
+                                </tr>;
                             })}
-                        </TableBody>
-                    </Table>
-                </Box>
-            </Box>
-            <Box>
-                <Heading level="3">i8253 Data</Heading>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableCell></TableCell>
-                        </TableRow>
-                    </TableHeader>
-                </Table>
-            </Box>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            </div>
         </Fragment>
     );
 }

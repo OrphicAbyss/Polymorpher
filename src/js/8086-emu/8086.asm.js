@@ -9,7 +9,7 @@
 
 
 import Registers from "./8086.registers.asm";
-import {HardwarePIT8254} from "./chip.8253.asm";
+import {HardwarePIT8253} from "./chip.8253.asm";
 
 // TODO: handle memory mapped hardware (BIOS, Video data etc)
 function Memory (stdlib, foreign, heap) {
@@ -2000,12 +2000,10 @@ export function Test (biosBinary) {
     // Heap for bus, holds a 16 bit value at each address as a buffer between emulation parts
     const busData = new ArrayBuffer(1024 * 2);
 
-    const PIT8254Data = new ArrayBuffer(8 * 4);
+    const PIT8253Data = new ArrayBuffer(8 * 4);
 
     const bus = new Bus(window, {}, busData);
-    const pit = new HardwarePIT8254(window, {}, PIT8254Data);
-
-
+    const pit = new HardwarePIT8253(window, {}, PIT8253Data);
 
     const registers = new Registers(window, {}, registerData);
     const memory = new Memory(window, {}, memoryData);
@@ -2071,19 +2069,6 @@ export function Test (biosBinary) {
     const mappedMemory = new MappedMemory();
     const cpu = new Instructions(window, {registers, memory: mappedMemory, bus, log: addLog, error: addErr}, null);
 
-    // const logPosAndCode = () => {
-    //     const IP = registers.getInstructionLocation();
-    //     addLog(`0:${numToHex(IP)} Op ${numToHex(mappedMemory.getByte(IP))}`);
-    // }
-    // let steps = 0;
-    // while (errors.length === 0 && steps < 100) {
-    //     // logPosAndCode();
-    //     cpu.execute();
-    //     steps++;
-    // }
-    // logPosAndCode();
-    // console.log(errors[0]);
-
     return {
         logs,
         errors,
@@ -2093,8 +2078,6 @@ export function Test (biosBinary) {
         bus
     };
 }
-
-
 
 
 /**
@@ -2111,10 +2094,6 @@ function HardwarePIC8259 () {
 
     // PORT 0x20 - CMD
     // PORT 0x21 - Data
-}
-
-function HardwarePIT8253 () {
-
 }
 
 // SETUP CPU

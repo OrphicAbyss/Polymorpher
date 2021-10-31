@@ -54,12 +54,12 @@ mov ax,4C00h
 int 21h                     ;Завершение программы
 `;
 
-import {Store, clear, del, get, keys, set} from "idb-keyval";
+import {createStore, clear, del, get, keys, set} from "idb-keyval";
 
 const module = "FileStore";
 const log = (...params) => console.log(`${module}:`, ...params);
 
-const fileStore = new Store("ide-files", "ide-files-store");
+const fileStore = createStore("ide-files", "ide-files-store");
 
 export function FS () {
     const getFilenames = () => {

@@ -1,25 +1,8 @@
 "use strict";
 
-import React from "react";
+import React, {Fragment} from "react";
+import "../index.css";
 
-import {Grommet} from "grommet/components/Grommet";
-import {Anchor} from "grommet/components/Anchor";
-import {Box} from "grommet/components/Box";
-import {Button} from "grommet/components/Button";
-import {Footer} from "grommet/components/Footer";
-import {Grid} from "grommet/components/Grid";
-import {Header} from "grommet/components/Header";
-import {Heading} from "grommet/components/Heading";
-import {Nav} from "grommet/components/Nav";
-import {Tabs} from "grommet/components/Tabs";
-import {Tab} from "grommet/components/Tab";
-import {Text} from "grommet/components/Text";
-
-import {Code} from "grommet-icons/icons/Code";
-import {Cube} from "grommet-icons/icons/Cube";
-import {Desktop} from "grommet-icons/icons/Desktop";
-import {List as ListIcon} from "grommet-icons/icons/List";
-import {Table} from "grommet-icons/icons/Table";
 import {schemeCategory10} from "d3-scale-chromatic";
 
 import {scanCode} from "./assembler/scanner";
@@ -35,6 +18,7 @@ import {Files} from "./components/files";
 import {EmulatorDetails} from "./components/emu_details";
 
 import {EMU8086} from "./components/8086emu";
+import {Window} from "./components/ui-framework";
 
 const colourCodes = {};
 
@@ -73,7 +57,7 @@ export default function App () {
         if (window.plausible && window.plausible.q) {
             window.plausible.q.push([layer + "-" + value]);
         }
-    }
+    };
 
     const show = (layer) => toggle(layer, true);
     const close = (layer) => toggle(layer, false);
@@ -92,7 +76,7 @@ export default function App () {
         // load new file
         setFile(filename);
         setCode(text);
-    }
+    };
 
     const [asmState, setAsmState] = React.useState({
         lexemes: [],
@@ -102,6 +86,70 @@ export default function App () {
         buffer: [],
         url: ""
     });
+
+    React.useEffect(() => {
+        function changeTabs (e) {
+            const target = e.target;
+            const parent = target.parentNode.parentNode;
+            const grandparent = parent.parentNode;
+
+            // Remove all current selected tabs
+            parent
+                .querySelectorAll("[aria-selected=\"true\"]")
+                .forEach(t => t.setAttribute("aria-selected", false));
+
+            // Set this tab as selected
+            target.setAttribute("aria-selected", true);
+
+            // Hide all tab panels
+            grandparent
+                .querySelectorAll("[role=\"tabpanel\"]")
+                .forEach(p => p.setAttribute("hidden", true));
+
+            // Show the selected panel
+            grandparent.parentNode
+                .querySelector(`#${target.getAttribute("aria-controls")}`)
+                .removeAttribute("hidden");
+        }
+
+        const tabs = document.querySelectorAll("[role=\"tab\"]");
+        const tabList = document.querySelector("[role=\"tablist\"]");
+        const openTab = document.querySelector("[aria-selected=\"true\"]");
+
+        changeTabs({target: openTab});
+
+        // Add a click event handler to each tab
+        tabs.forEach(tab => {
+            tab.addEventListener("click", changeTabs);
+        });
+
+        // Enable arrow navigation between tabs in the tab list
+        let tabFocus = 0;
+
+        tabList.addEventListener("keydown", e => {
+            // Move right
+            if (e.keyCode === 39 || e.keyCode === 37) {
+                tabs[tabFocus].setAttribute("tabindex", -1);
+                if (e.keyCode === 39) {
+                    tabFocus++;
+                    // If we're at the end, go to the start
+                    if (tabFocus >= tabs.length) {
+                        tabFocus = 0;
+                    }
+                    // Move left
+                } else if (e.keyCode === 37) {
+                    tabFocus--;
+                    // If we're at the start, move to the end
+                    if (tabFocus < 0) {
+                        tabFocus = tabs.length - 1;
+                    }
+                }
+
+                tabs[tabFocus].setAttribute("tabindex", 0);
+                tabs[tabFocus].focus();
+            }
+        });
+    }, []);
 
     React.useEffect(() => {
         const timeStart = new Date();
@@ -157,98 +205,106 @@ export default function App () {
         if (window.plausible && window.plausible.q) {
             window.plausible.q.push([tabNames[index]]);
         }
-    }
+    };
+
+    const pageTitle = <Fragment><b>WebAssembler</b> - An online x86 assembler and emulator</Fragment>;
+    const pageStatus = <Fragment>
+        <p className="status-bar-field">{file}</p>
+        <p className="status-bar-field">Line: 1</p>
+    </Fragment>;
 
     return (
-        <Grommet full>
+        <Fragment>
             <InstructionLayer isOpen={insLayer} close={() => close("ins")}/>
             <OpCodeLayer isOpen={opcodeLayer} close={() => close("opcode")}/>
             <About isOpen={aboutLayer} close={() => close("about")}/>
             <EmulatorDetails isOpen={compLayer} close={() => close("comp")}/>
-
-            <Grid
-                rows={["auto", "flex"]}
-                columns={["auto", "flex"]}
-                fill
-                areas={[
-                    ["header", "header"],
-                    ["sidebar", "main"],
-                    ["footer", "footer"]
-                ]}
-            >
-                <Box gridArea="header">
-                    <Header background="dark-1" gap="medium" pad="xsmall">
-                        <Box direction="row" align="center" gap="small">
-                            <Cube/>
-                            <Heading color="white" size="small">
-                                WebAssembler
-                            </Heading>
-                            <Text>An online x86 assembler</Text>
-                        </Box>
-                        <Nav direction="row">
-                            <Anchor label="About" icon={<Code/>} onClick={() => show("about")}/>
-                            <Anchor label="Instructions" icon={<ListIcon/>} onClick={() => show("ins")}/>
-                            <Anchor label="Op Codes" icon={<Table/>} onClick={() => show("opcode")}/>
-                            <Anchor label="Hardware" icon={<Desktop/>} onClick={() => show("comp")}/>
-                        </Nav>
-                    </Header>
-                </Box>
-                <Box gridArea="sidebar" background="light-1">
+            <Window title={pageTitle} draggable={false} className={"main"} statusBar={pageStatus}>
+                <div className="flexRowRev">
+                    <button onClick={() => show("comp")}>
+                        <div className={"fa fa-desktop"}/>
+                        Hardware
+                    </button>
+                    <button onClick={() => show("opcode")}>
+                        <div className={"fa fa-table"}/>
+                        Op Codes
+                    </button>
+                    <button onClick={() => show("ins")}>
+                        <div className={"fa fa-list"}/>
+                        Instructions
+                    </button>
+                    <button onClick={() => show("about")}>
+                        <div className={"fa fa-info-circle"}/>
+                        About
+                    </button>
+                </div>
+                <div className="flexRow flexFill flexGap">
                     <Files fs={fs} loadFile={loadFile} openFile={file} fileChanged={changed}/>
-                </Box>
-                <Box gridArea="main" overflow="auto" direction="column">
-                    <Tabs flex>
-                        <Tab title="Code">
-                            <Box pad="small" fill>
-                                <Editor value={code} onChange={codeUpdate}/>
-                            </Box>
-                        </Tab>
-                        {/*<Tab title="Lexemes">*/}
-                        {/*    <Box pad="medium">*/}
-                        {/*        {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
-                        {/*    </Box>*/}
-                        {/*</Tab>*/}
-                        <Tab title="Tokens">
-                            <Box pad="medium">
-                                {tokens.map((token, i) => (
-                                    <div key={i} style={{color: getColor(token.type)}}>{i}: {token.toString() + " " + token.type}</div>
-                                ))}
-                            </Box>
-                        </Tab>
-                        <Tab title="Parsed">
-                            <Box pad="medium">
-                                {parsed.map((statement, i) => (
-                                    <div key={i} style={{color: getColor(statement.getType())}}>{i}: {statement.toString() + " " + statement.getType()}</div>
-                                ))}
-                            </Box>
-                        </Tab>
-                        <Tab title="Binary">
-                            <Box pad="medium">
-                                {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                                {assembled.binaryOutput.map((binary, i) => (<div key={"b" + i}>{i}: {binary}</div>))}
-                                <Button href={url} label="Download Machine Code" download="code.com"/>
-                            </Box>
-                        </Tab>
-                        <Tab title="Formatted Binary">
-                            <Box pad="medium">
-                                {assembled.errors.map((error, i) => (<div key={"e" + i} style={{color: "red"}}>{error}</div>))}
-                                {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
-                                <Button href={url} label="Download Machine Code" download="code.com"/>
-                            </Box>
-                        </Tab>
-                        <Tab title="8086 Virtual Machine">
-                            <Box pad="medium">
-                                <EMU8086 bios={buffer}/>
-                            </Box>
-                        </Tab>
-                    </Tabs>
-                </Box>
-                <Box gridArea="footer">
-                    <Footer background="dark-1">
-                        Status: ...
-                    </Footer>
-                </Box>
-            </Grid>
-        </Grommet>
+                    <div className="flexRow flexFill">
+                        <section className="tabs flexFill">
+                            <div>
+                                <menu role="tablist" aria-label="Window Tabs">
+                                    <button role="tab" aria-selected="true" aria-controls="code">Code</button>
+                                    {/*<button role="tab" aria-controls="tokens">Lexemes</button>*/}
+                                    <button role="tab" aria-controls="tokens">Tokens</button>
+                                    <button role="tab" aria-controls="parsed">Parsed</button>
+                                    <button role="tab" aria-controls="binary">Binary</button>
+                                    <button role="tab" aria-controls="formattedBinary">Formatted Binary</button>
+                                    <button role="tab" aria-controls="x86emu">8086 Virtual Machine</button>
+                                </menu>
+                            </div>
+                            <div className="flexFill fillHolder">
+                                <article role="tabpanel" id="code">
+                                    <Editor value={code} onChange={codeUpdate}/>
+                                </article>
+                                {/*<article role="tabpanel" id="lexemes">*/}
+                                {/*    {lexemes.map((token, i) => (<div key={i} style={{color: schemeCategory10[token.type]}}>{token.token}</div>))}*/}
+                                {/*</article>*/}
+                                <article role="tabpanel" id="tokens">
+                                    <div className="fillScroll">
+                                    {tokens.map((token, i) => (
+                                        <div key={i}
+                                             style={{color: getColor(token.type)}}>{i}: {token.toString() + " " + token.type}</div>
+                                    ))}
+                                    </div>
+                                </article>
+                                <article role="tabpanel" id="parsed">
+                                    <div className="fillScroll">
+                                    {parsed.map((statement, i) => (
+                                        <div key={i}
+                                             style={{color: getColor(statement.getType())}}>{i}: {statement.toString() + " " + statement.getType()}</div>
+                                    ))}
+                                    </div>
+                                </article>
+                                <article role="tabpanel" id="binary">
+                                    <div className="fillScroll">
+                                    {assembled.errors.map((error, i) => (
+                                        <div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                                    {assembled.binaryOutput.map((binary, i) => (
+                                        <div key={"b" + i}>{i}: {binary}</div>))}
+                                    <a href={url} download="code.com">
+                                        <button>Download Machine Code</button>
+                                    </a>
+                                    </div>
+                                </article>
+                                <article role="tabpanel" id="formattedBinary">
+                                    <div className="fillScroll">
+                                    {assembled.errors.map((error, i) => (
+                                        <div key={"e" + i} style={{color: "red"}}>{error}</div>))}
+                                    {assembled.formattedBin.map((line, i) => (<div key={"l" + i}>{line}</div>))}
+                                    <a href={url} download="code.com">
+                                        <button>Download Machine Code</button>
+                                    </a>
+                                    </div>
+                                </article>
+                                <article role="tabpanel" id="x86emu">
+                                    <EMU8086 bios={buffer}/>
+                                </article>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </Window>
+        </Fragment>
     );
 }

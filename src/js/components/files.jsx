@@ -1,23 +1,7 @@
 "use strict";
 
-import React from "react";
-import {Box} from "grommet/components/Box";
-import {Button} from "grommet/components/Button";
-import {DropButton} from "grommet/components/DropButton";
-import {Form} from "grommet/components/Form";
-import {FormField} from "grommet/components/FormField";
-import {Heading} from "grommet/components/Heading";
-import {Layer} from "grommet/components/Layer";
-import {List} from "grommet/components/List";
-import {Text} from "grommet/components/Text";
-import {TextInput} from "grommet/components/TextInput";
-import {Add} from "grommet-icons/icons/Add";
-import {Document} from "grommet-icons/icons/Document";
-import {DocumentUpload} from "grommet-icons/icons/DocumentUpload";
-import {View} from "grommet-icons/icons/View";
-import {MoreVertical} from "grommet-icons/icons/MoreVertical";
-import {Save} from "grommet-icons/icons/Save";
-import {Trash} from "grommet-icons/icons/Trash";
+import React, {Fragment} from "react";
+import {Modal} from "./ui-framework";
 
 function CreateDialog (props) {
     const {isOpen, closeDialog} = props;
@@ -44,33 +28,29 @@ function CreateDialog (props) {
     };
 
     return (
-        <React.Fragment>
+        <Fragment>
             {isOpen && (
-                <Layer position="top" modal onClickOutside={closeAddDialog} onEsc={closeAddDialog}>
-                    <Box pad="medium" gap="small" width="medium">
-                        <Form onSubmit={createAndCloseDialog}>
-                            <Heading level={3} margin="none">
-                                Enter new filename:
-                            </Heading>
-                            <FormField>
-                                <TextInput autoFocus icon={<Document/>} value={newFilename} onChange={textChange}/>
-                            </FormField>
-                            <Box as="footer" gap="small" direction="row" align="center" justify="end" pad="small">
-                                <Button label="Cancel" onClick={closeAddDialog}/>
-                                <Button primary icon={<Save/>} label="Create" type="submit"/>
-                            </Box>
-                        </Form>
-                    </Box>
-                </Layer>
+                <Modal title={"New File"} onClickOutside={closeAddDialog} onEsc={closeAddDialog}>
+                    <form onSubmit={createAndCloseDialog}>
+                        <div className="field-row-stacked">
+                            <label>Enter new filename:</label>
+                            <input type="text" autoFocus value={newFilename} onChange={textChange}/>
+                        </div>
+                        <div className="flexRowRev">
+                            <div><button type="submit"><div className={"fa fa-file"}/> Create</button></div>
+                            <div><button onClick={closeAddDialog}>Cancel</button></div>
+                        </div>
+                    </form>
+                </Modal>
             )}
-        </React.Fragment>)
-        ;
+        </Fragment>
+    );
 }
 
 function DeleteDialog (props) {
     const {isOpen, closeDialog, file} = props;
 
-    const cancel = () => {
+    const closeDeleteDialog = () => {
         closeDialog();
     };
 
@@ -81,20 +61,18 @@ function DeleteDialog (props) {
     return (
         <React.Fragment>
             {isOpen && (
-                <Layer position="top" modal onClickOutside={cancel} onEsc={cancel}>
-                    <Box pad="medium" gap="small" width="medium">
-                        <Form onSubmit={deleteFile}>
-                            <Heading level={3} margin="none">
-                                Are you sure you want to delete the file:
-                            </Heading>
-                            <Text>{file}</Text>
-                            <Box as="footer" gap="small" direction="row" align="center" justify="end" pad="small">
-                                <Button label="Cancel" onClick={cancel}/>
-                                <Button primary icon={<Trash/>} label="Delete" type="submit"/>
-                            </Box>
-                        </Form>
-                    </Box>
-                </Layer>
+                <Modal title={"Delete File"} onClickOutside={closeDeleteDialog} onEsc={closeDeleteDialog}>
+                    <form onSubmit={deleteFile}>
+                        <div className="field-row-stacked">
+                            <label>Are you sure you want to delete the file:</label>
+                            <input type="text" value={file} readOnly={true}/>
+                        </div>
+                        <div className="flexRowRev">
+                            <div><button type="submit"><div className={"fa fa-trash"}/> Delete</button></div>
+                            <div><button onClick={closeDeleteDialog}>Cancel</button></div>
+                        </div>
+                    </form>
+                </Modal>
             )}
         </React.Fragment>);
 }
@@ -135,6 +113,7 @@ export function Files (props) {
         setDelFile(file)
         setDeleteDialog(true);
     };
+
     const closeDeleteDialog = (file) => {
         if (file !== undefined) {
             if (file.length > 0) {
@@ -171,27 +150,25 @@ export function Files (props) {
     };
 
     return (
-        <Box pad="small">
-            <Box fill direction="row-responsive">
-                <Heading level="3">Files</Heading>
-                <Box flex/>
-                <Heading level="3"><Add onClick={openAddDialog}/></Heading>
-            </Box>
-            <List data={files} pad="small">
-                {(datum, index) => (
-                    <Box key={index} direction="row-responsive">
-                        <Box flex direction="row-responsive" onClick={() => loadFile(datum)}>
-                            {datum === openFile ? (fileChanged ? <DocumentUpload/> : <View/>) : <Document/>}
-                            <Text>{datum}</Text>
-                        </Box>
-                        <DropButton dropContent={<Box pad="small"><Trash onClick={() => openDeleteDialog(datum)}/></Box>}>
-                            <MoreVertical/>
-                        </DropButton>
-                    </Box>
-                )}
-            </List>
+        <Fragment>
+            <div style={{display: "flex", flexDirection: "column"}}>
+                <h3 style={{display: "flex"}}>
+                    <div style={{flexGrow: 1}}>Files</div>
+                    <button style={{minWidth: "auto"}} onClick={openAddDialog}><div className={"fa fa-plus"}/></button>
+                    <button style={{minWidth: "auto"}} onClick={() => openDeleteDialog(openFile)}><div className={"fa fa-trash"}/></button>
+                </h3>
+                <ul className={"tree-view"} style={{width: "200px", height: "100%"}}>
+                    {files.map((datum, index) => {
+                        if (datum === openFile) {
+                            return <li key={index} style={{backgroundColor: "#000080", color: "white"}}>{datum}{fileChanged && <span>...</span>}</li>;
+                        } else {
+                            return <li key={index} onClick={() => loadFile(datum)}>{datum}</li>;
+                        }
+                    })}
+                </ul>
+            </div>
             <CreateDialog isOpen={addDialog} closeDialog={closeAddDialog}/>
             <DeleteDialog isOpen={deleteDialog} closeDialog={closeDeleteDialog} file={delFile}/>
-        </Box>
+        </Fragment>
     );
 }
