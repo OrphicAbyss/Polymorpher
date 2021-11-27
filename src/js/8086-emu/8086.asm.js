@@ -9,89 +9,8 @@
 
 
 import Registers from "./8086.registers.asm";
+import {Memory, MappedMemory} from "./memory.asm";
 import {HardwarePIT8253} from "./chip.8253.asm";
-
-// TODO: handle memory mapped hardware (BIOS, Video data etc)
-function Memory (stdlib, foreign, heap) {
-    "use asm";
-
-    // use heap as a the register file, access either as 8bit or 16bit values
-    const memByte = new stdlib.Uint8Array(heap);
-
-    var offset = 0x0;
-
-    function setOffset (offsetPrarm) {
-        offsetPrarm = offsetPrarm | 0;
-
-        offset = offsetPrarm;
-    }
-
-    function getByte (addr) {
-        addr = addr | 0;
-
-        return memByte[addr - offset] | 0;
-    }
-
-    function setByte (addr, value) {
-        addr = addr | 0;
-        value = value | 0;
-
-        memByte[addr - offset] = value;
-    }
-
-    function getWord (addr) {
-        addr = addr | 0;
-
-        return memByte[addr - offset] | (memByte[addr - offset + 1] << 8) | 0;
-    }
-
-    function setWord (addr, value) {
-        addr = addr | 0;
-        value = value | 0;
-
-        memByte[addr - offset] = value & 0b11111111;
-        memByte[addr - offset + 1] = value >> 8;
-    }
-
-    function get(bits, addr) {
-        bits = bits | 0;
-        addr = addr | 0;
-
-        switch (bits) {
-            case 8:
-                return getByte(addr);
-            case 16:
-                return getWord(addr);
-            default:
-                return -1;
-        }
-    }
-
-    function set(bits, addr, value) {
-        bits = bits | 0;
-        addr = addr | 0;
-        value = value | 0;
-
-        switch (bits) {
-            case 8:
-                return setByte(addr, value);
-            case 16:
-                return setWord(addr, value);
-            default:
-                return -1;
-        }
-    }
-
-    return {
-        setOffset,
-        get,
-        set,
-        getByte,
-        setByte,
-        getWord,
-        setWord
-    }
-}
 
 function Instructions (stdlib, foreign, heap) {
     "use asm";
@@ -2005,68 +1924,27 @@ export function Test (biosBinary) {
     const bus = new Bus(window, {}, busData);
     const pit = new HardwarePIT8253(window, {}, PIT8253Data);
 
+    // setup initial register details
     const registers = new Registers(window, {}, registerData);
-    const memory = new Memory(window, {}, memoryData);
-    const bios = new Memory(window, {}, biosData);
-    bios.setOffset(0xF0000);
-
     registers.setInstructionPointer(0x0000);
     registers.setSegment16Bit(registers.seg16.CS, 0xF000);
 
-    function MappedMemory() {
-        // Unknown location
-        const noMemory = {
-            get: () => 0,
-            set: () => undefined,
-            getByte: () => 0,
-            getWord: () => 0,
-            setByte: () => undefined,
-            setWord: () => undefined
-        };
+    // setup main memory and other mapped memory locations
+    const memory = new Memory(window, {}, memoryData);
+    const bios = new Memory(window, {}, biosData);
+    bios.setOffset(0xF0000);
+    const mappedMemory = new MappedMemory();
+    mappedMemory.addMemory(memory);
+    mappedMemory.addMemory(bios);
 
-        function getBuffer (loc) {
-            loc = loc | 0;
-            if (loc < memoryData.length) {
-                // is part of the main memory
-                return memory;
-            } else if (loc >= 0xF0000 && loc < 0x100000) {
-                // is part of the bios mapped memory
-                return bios;
-            } else {
-                // console.log("Unknown memory access at: " + loc.toString(16))
-                return noMemory;
-            }
-        }
-
-        return {
-            get: (bits, loc) => {
-                return getBuffer(loc).get(bits, loc);
-            },
-            set: (bits, loc, value) => {
-                return getBuffer(loc).set(bits, loc, value);
-            },
-            getByte: (loc) => {
-                return getBuffer(loc).getByte(loc);
-            },
-            setByte: (loc, value) => {
-                return getBuffer(loc).setByte(loc, value);
-            },
-            getWord: (loc) => {
-                return getBuffer(loc).getWord(loc);
-            },
-            setWord: (loc, value) => {
-                return getBuffer(loc).setWord(loc, value);
-            }
-        }
-    }
-
+    // setup logging code
     const logs = [];
     const errors = [];
     const addLog = (...log) => logs.push(log.join(""));
     const addErr = (...log) => logs.push("Error: " + log.join(""));
     // const addError = (...err) => errors.push(err.join(""));
 
-    const mappedMemory = new MappedMemory();
+    // setup instructiosn
     const cpu = new Instructions(window, {registers, memory: mappedMemory, bus, log: addLog, error: addErr}, null);
 
     return {

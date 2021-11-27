@@ -56,8 +56,8 @@ int 21h                     ;Завершение программы
 
 import {createStore, clear, del, get, keys, set} from "idb-keyval";
 
-const module = "FileStore";
-const log = (...params) => console.log(`${module}:`, ...params);
+const storeName = "FileStore";
+const log = (...params) => console.log(`${storeName}:`, ...params);
 
 const fileStore = createStore("ide-files", "ide-files-store");
 
