@@ -10,6 +10,7 @@
 
 import Registers from "./8086.registers.asm";
 import {Memory, MappedMemory} from "./memory.asm";
+import {Bus} from "./bus.asm";
 import {HardwarePIT8253} from "./chip.8253.asm";
 
 function Instructions (stdlib, foreign, heap) {
@@ -1864,48 +1865,6 @@ function Instructions (stdlib, foreign, heap) {
 
     return {
         execute: execute
-    };
-}
-
-// THOUGHT: non-asm.js code to manage mapping between CPU and Hardware?
-// Lookup table mapping bus addresses to functions on hardware objects
-function Bus (stdlib, foreign, heap) {
-    "use asm";
-
-    const memByte = new stdlib.Int8Array(heap);
-
-    function write(bits, addr, data) {
-        bits = bits | 0;
-        addr = addr | 0;
-        data = data | 0;
-
-        switch (bits) {
-            case 8:
-                memByte[addr] = data & 0b11111111;
-                // memByte[address + 1] = 0b00000000;
-                break;
-            case 16:
-                memByte[addr] = data & 0b11111111;
-                memByte[addr + 1] = data >> 8;
-                break;
-        }
-    }
-
-    function read(bits, addr) {
-        bits = bits | 0;
-        addr = addr | 0;
-
-        switch (bits) {
-            case 8:
-                return memByte[addr] | (memByte[addr + 1] << 8) | 0;
-            case 16:
-                return memByte[addr] | 0;
-        }
-    }
-
-    return {
-        write,
-        read
     };
 }
 
