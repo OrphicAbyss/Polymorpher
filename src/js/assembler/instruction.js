@@ -354,7 +354,7 @@ class OpCodeBase {
 // OP ModRM imm - Register/memory and imm           - AND r/m16, imm16
 
 
-class OpCode extends OpCodeBase {
+export class OpCode extends OpCodeBase {
     constructor (code, subCode, operands) {
         super(code, subCode, operands);
     }
@@ -754,7 +754,7 @@ export const instructions = [
     new Instruction("LDS", "Load pointer using DS", [], "load/store/move"),
     new Instruction("LEA", "Load Effective Address", [], "load/store/move"),
     new Instruction("LES", "Load ES with pointer", [], "load/store/move"),
-    new Instruction("LOCK", "Assert BUS LOCK# signal", [
+    new Instruction("LOCK", "Prefix - Assert BUS LOCK# signal", [
         new OpCode("F0")
     ], "prefix"),
     new Instruction("LODSB", "Load string byte", [
@@ -829,19 +829,19 @@ export const instructions = [
         new OpCodeModRM("F6", "10", [new RegMemParam(8, "G")]),
         new OpCodeModRM("F7", "10", [new RegMemParam(16, "G")])
     ], "logic"),
-    new Instruction("REPNE", "Repeat while not equal Prefix", [
+    new Instruction("REPNE", "Prefix - Repeat while not equal", [
         new OpCode("F2")
     ], "prefix"),
-    new Instruction("REPNZ", "Repeat while not zero", [
+    new Instruction("REPNZ", "Prefix - Repeat while not zero", [
         new OpCode("F2")
     ], "prefix"),
-    new Instruction("REP", "Repeat Prefix", [
+    new Instruction("REP", "Prefix - Repeat", [
         new OpCode("F3")
     ], "prefix"),
-    new Instruction("REPE", "Repeat while equal Prefix", [
+    new Instruction("REPE", "Prefix - Repeat while equal", [
         new OpCode("F3")
     ], "prefix"),
-    new Instruction("REPZ", "Repeat while zero Prefix", [
+    new Instruction("REPZ", "Prefix - Repeat while zero", [
         new OpCode("F3")
     ], "prefix"),
     new Instruction("OR", "Logical OR", [

@@ -1,7 +1,6 @@
 "use strict";
 
-import {Immediate, PlaceholderImmediate} from "./immediate";
-import {Label} from "./tokeniser";
+import {PlaceholderImmediate} from "./immediate";
 import {FormatCOM, FormatMZ} from "./formats";
 
 export function assemble(statements) {
@@ -66,7 +65,7 @@ export function assemble(statements) {
                     const operands = statement.operands;
                     let placeholder = false;
 
-                    // swap out any labels for PlaceholderImmediates so we can switch in the value later
+                    // swap out any labels for a Placeholder Immediate, so we can switch in the value later
                     for (let i = 0; i < operands.length; i++) {
                         const operand = operands[i];
                         if (operand instanceof PlaceholderImmediate) {
@@ -75,12 +74,15 @@ export function assemble(statements) {
                         }
                     }
 
-                    if (prefix) {
-                        addError(position, `Prefixes are not yet supported, ${prefix.key} ignored!`);
-                    }
                     if (!instruction.opcodes) {
-                        addError(position, `Instruction not yet supported, ${instruction.key} ignored!`);
+                        if (prefix) {
+                            addError(position, `Instruction not supported yet, prefix ${prefix.key} ignored!`);
+                        }
+                        addError(position, `Instruction not supported yet, ${instruction.key} ignored!`);
                     } else if (!instruction.opcodes) {
+                        if (prefix) {
+                            addError(position, `Instruction code generation not supported yet, prefix ${prefix.key} ignored!`);
+                        }
                         addError(position, `Instruction code generation not supported yet, ${instruction.key} ignored!`);
                     } else {
                         let matched = false;
@@ -88,6 +90,22 @@ export function assemble(statements) {
                             const opCode = instruction.findOpCode(operands);
 
                             if (opCode) {
+                                if (prefix) {
+                                    if (!prefix.instruction) {
+                                        addError(position, `Prefix not supported yet, ${prefix.key} ignored!`);
+                                    } else if (!prefix.instruction.opcodes) {
+                                        addError(position, `Instruction code generation not supported yet, ${instruction.key} ignored!`);
+                                    } else {
+                                        const preOpCode = prefix.instruction.findOpCode([]);
+
+                                        if (!preOpCode) {
+                                            addError(position, `Unable to match prefix (${prefix.key}) to opcode.`);
+                                        } else {
+                                            format.binaryOutput.push(preOpCode.getBytes([]));
+                                        }
+                                    }
+                                }
+
                                 if (placeholder) {
                                     format.placeholders[format.placeholders.length - 1].opcode = opCode;
                                 }

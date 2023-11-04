@@ -3,7 +3,7 @@
 import {StrToken} from "./tokeniser";
 import {Immediate, PlaceholderImmediate} from "./immediate";
 import {DefineDataDirective, ReserveDataDirective} from "./directive";
-import {Instruction, RelParam} from "./instruction";
+import {RelParam} from "./instruction";
 
 class Format {
     constructor (name, addErrorFn) {
@@ -59,7 +59,7 @@ class Format {
                                     pos++;
                                 }
                                 const codeLocation = this.getCodeLocation(pos);
-                                operand.value = posLabel[0].offset - codeLocation;
+                                operand.value = posLabel[0].codeLocation - codeLocation;
                             } else {
                                 operand.value = posLabel[0].offset;
                             }
@@ -105,7 +105,7 @@ class Format {
     }
 
     isValidDirective(directive) {
-        return this.validDirectives.filter((str) => str == directive.key).length === 1;
+        return this.validDirectives.filter((str) => str === directive.key).length === 1;
     }
 
     handleDirective(directive, parameters) {
@@ -370,7 +370,7 @@ export class FormatMZ extends Format {
             new Immediate(overlayNumber)                //1A -
         ];
 
-        this.segmentReferences.map((segmentRef, i) => {
+        this.segmentReferences.map((segmentRef) => {
             const segment = segmentRef.segment.offset / 16;
             const position = segmentRef.position;
             const byte = segmentRef.byte;

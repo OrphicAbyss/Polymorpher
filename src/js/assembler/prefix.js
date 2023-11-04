@@ -1,10 +1,14 @@
 "use strict";
 
+import {instructions} from "./instruction";
+
 export class Prefix {
     constructor (prefix, name) {
         this.key = prefix;
         this.name = name;
         this.type = "PREFIX";
+
+        this.instruction = instructions.find((ins) => this.key === ins.key);
     }
 
     toString () {

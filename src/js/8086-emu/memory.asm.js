@@ -1,9 +1,9 @@
 "use strict";
 
-export default function Memory (stdlib, foreign, heap) {
+export function Memory (stdlib, foreign, heap) {
     "use asm";
 
-    // use heap as a the register file, access either as 8bit or 16bit values
+    // use heap as the register file, access either as 8bit or 16bit values
     const memByte = new stdlib.Uint8Array(heap);
 
     let offset = 0x0;
