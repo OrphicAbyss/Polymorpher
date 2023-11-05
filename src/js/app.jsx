@@ -1,7 +1,6 @@
 "use strict";
 
 import React, {Fragment} from "react";
-import "../index.css";
 
 import {schemeCategory10} from "d3-scale-chromatic";
 

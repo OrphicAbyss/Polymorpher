@@ -1,10 +1,8 @@
 "use strict";
 
 import React from "react";
-import {Box} from "grommet/components/Box";
-import {Button} from "grommet/components/Button";
 
-export function V86Terminal (props) {
+export function V86Terminal () {
     const termRef = React.useRef("v86-ref");
     const [run, setRun] = React.useState(false);
     const [emulator, setEmulator] = React.useState(null);
@@ -57,12 +55,12 @@ export function V86Terminal (props) {
     }, []);
 
     return (
-        <Box>
-            <Button onClick={() => setRun(!run)}>{!run ? "Start" : "Stop"}</Button>
+        <div>
+            <button onClick={() => setRun(!run)}>{!run ? "Start" : "Stop"}</button>
             <div id="v86" ref={termRef}>
                 <div style={{whiteSpace: "pre", font: "14px 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace", lineHeight: "14px"}}></div>
                 <canvas></canvas>
             </div>
-        </Box>
+        </div>
     );
 }

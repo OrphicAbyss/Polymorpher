@@ -1,7 +1,16 @@
 "use strict";
 
 import React from "react";
-import ReactDOM from "react-dom";
+import {createRoot} from "react-dom/client";
 import App from "./js/app";
 
-ReactDOM.render(React.createElement(App), document.getElementById("react-root"));
+export function run() {
+    console.log("Starting app...");
+
+    const domRoot = document.getElementById("react-root");
+    const root = createRoot(domRoot);
+    root.render(<App/>);
+}
+
+run();
+

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>WebASM-x86 - Online Assembler</title>
@@ -9,7 +9,7 @@
 
     <style>
         body {
-            margin: 0px;
+            margin: 0;
         }
         .code {
             width: 99%;
@@ -17,28 +17,29 @@
         }
     </style>
 
-    <link rel="stylesheet" href="https://code.cdn.mozilla.net/fonts/fira.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/xp.css@0.2.4/dist/98.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@5.15.3/css/all.css"/>
+    <link rel="stylesheet" href="://code.cdn.mozilla.net/fonts/fira.css"/>
+    <link rel="stylesheet" href="://unpkg.com/xp.css@0.2.4/dist/98.css"/>
+    <link rel="stylesheet" href="://unpkg.com/@fortawesome/fontawesome-free@5.15.3/css/all.css"/>
+
+    <script type="application/javascript" defer>
+        // Only include if production version
+        if (window.location.hostname === "webasm.jorts.solutions") {
+            const body = document.getElementsByTagName("body")[0];
+
+            const script = document.createElement("script");
+            script.async = true;
+            script.defer = true;
+            script["data-domain"] = "webasm.jorts.solutions";
+            script.src = "https://plausible.io/js/plausible.js";
+            body.appendChild(script);
+        }
+    </script>
+
+    <link rel="stylesheet" href="index.css"/>
 </head>
 <body>
 
 <div id="react-root" class="main"></div>
-
-
-<script type="application/javascript">
-    // Only include if production version
-    if (window.location.hostname === "webasm.jorts.solutions") {
-        const body = document.getElementsByTagName("body")[0];
-
-        const script = document.createElement("script");
-        script.async = true;
-        script.defer = true;
-        script["data-domain"] = "webasm.jorts.solutions";
-        script.src = "https://plausible.io/js/plausible.js";
-        body.appendChild(script);
-    }
-</script>
 <script  src="index.js" type="module"></script>
 </body>
 </html>

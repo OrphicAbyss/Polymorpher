@@ -7,6 +7,16 @@ const path = require("path");
 const port = process.env.PORT || 3333;
 
 function onRequest(request, response) {
+    const acceptEncoding = request.headers["accept-encoding"];
+
+    let gzipSupported = false;
+    let brSupported = false;
+
+    if (acceptEncoding) {
+        gzipSupported = acceptEncoding.includes("gzip");
+        brSupported = acceptEncoding.includes("br");
+    }
+
     let pathname = request.url;
     console.log("Request for " + pathname + " received.");
 
@@ -35,10 +45,25 @@ function onRequest(request, response) {
             break;
     }
 
+    const fileExists = (path) => {
+        return fs.existsSync(path) && !fs.statSync(path).isDirectory();
+    }
+
     try {
-        if (fs.existsSync(pathname) && !fs.statSync(pathname).isDirectory()) {
-            const stream = fs.createReadStream(pathname);
-            response.writeHead(200, {"Content-Type": content});
+        if (fileExists(pathname)) {
+            let stream;
+            const header = {"Content-Type": content};
+
+            if (brSupported && fileExists(pathname + ".br")) {
+                stream = fs.createReadStream(pathname + ".br");
+                header["Content-Encoding"] = "br";
+            } else if (gzipSupported && fileExists(pathname + ".gz")) {
+                stream = fs.createReadStream(pathname + ".gz");
+            header["Content-Encoding"] = "gzip";
+            } else {
+                    stream = fs.createReadStream(pathname);
+            }
+            response.writeHead(200, header);
             stream.pipe(response);
         } else {
             response.writeHead(404);

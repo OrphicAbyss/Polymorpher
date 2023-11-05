@@ -199,14 +199,14 @@ export function EMU8086 (props) {
                         <button onClick={() => runCPU(2)}>Run x2</button>
                         <button onClick={() => runCPU(4)}>Run x4</button>
                     </Fragment>}
-                    {cpuTimer && <button label="" onClick={() => pauseCPU()}>Pause</button>}
+                    {cpuTimer && <button onClick={() => pauseCPU()}>Pause</button>}
                 </Fragment>}
                 {/*<Text>CPU Step: {step}</Text>*/}
             </div>
             <div className="flexFill flexRow">
                 <div className="flexFill flexCol">
                     <h3>History</h3>
-                    <textarea className="flexFill" ref={textAreaRef} value={emuOutput.join("\n")}></textarea>
+                    <textarea className="flexFill" ref={textAreaRef} value={emuOutput.join("\n")} readOnly={true}></textarea>
                 </div>
                 <div className="flexRow">
                     <div>
