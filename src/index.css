@@ -24,6 +24,11 @@ body {
     height: 100%;
 }
 
+.code {
+    width: 99%;
+    /*font-family: 'Fira Mono', -moz-fixed, monospace;*/
+}
+
 .modal {
     position: absolute;
     z-index: 5;
