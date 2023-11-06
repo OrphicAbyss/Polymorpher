@@ -11,7 +11,8 @@ function CreateDialog (props) {
         closeDialog();
         setNewFilename("");
     };
-    const createAndCloseDialog = () => {
+    const createAndCloseDialog = (e) => {
+        e.preventDefault();
         closeDialog(newFilename)
             .then((closed) => {
                 if (closed) {
@@ -54,7 +55,8 @@ function DeleteDialog (props) {
         closeDialog();
     };
 
-    const deleteFile = () => {
+    const deleteFile = (e) => {
+        e.preventDefault();
         closeDialog(file);
     };
 
@@ -88,25 +90,32 @@ export function Files (props) {
     const [addDialog, setAddDialog] = React.useState(false);
     const [deleteDialog, setDeleteDialog] = React.useState(false);
 
+    const loadFile = async (filename) => {
+        const fileData = await fs.getFile(filename)
+        setCode(filename, fileData);
+    };
+
     const openAddDialog = () => {
         setAddDialog(true);
     };
-    const closeAddDialog = (filename) => {
+
+    const closeAddDialog = async (filename) => {
         if (filename !== undefined) {
-            if (filename.length > 0) {
-                return fs.setFile(filename)
-                    .then(() => fs.getFilenames())
-                    .then((fileList) => setFiles(fileList))
-                    .then(() => setAddDialog(false))
-                    .then(() => true);
+            if (filename.length > 0 && !await fs.exists(filename)) {
+                await fs.setFile(filename, "");
+                let fileList = await fs.getFilenames();
+                setFiles(fileList);
+                await loadFile(filename);
+                setAddDialog(false);
+                return true;
             } else {
                 // TODO: add message
-                return Promise.resolve(false);
+                return false;
             }
         }
 
         setAddDialog(false);
-        return Promise.resolve(true);
+        return true;
     };
 
     const openDeleteDialog = (file) => {
@@ -114,22 +123,23 @@ export function Files (props) {
         setDeleteDialog(true);
     };
 
-    const closeDeleteDialog = (file) => {
+    const closeDeleteDialog = async (file) => {
         if (file !== undefined) {
             if (file.length > 0) {
-                return fs.delFile(file)
-                    .then(() => fs.getFilenames())
-                    .then((fileList) => setFiles(fileList))
-                    .then(() => setDeleteDialog(false))
-                    .then(() => true);
+                await fs.delFile(file);
+                const fileList = await fs.getFilenames();
+                setFiles(fileList);
+                await loadFile(fileList[0]);
+                setDeleteDialog(false);
+                return true;
             } else {
                 // TODO: add message
-                return Promise.resolve(false);
+                return false;
             }
         }
 
         setDeleteDialog(false);
-        return Promise.resolve(true);
+        return true;
     };
 
     React.useEffect(() => {
@@ -141,13 +151,6 @@ export function Files (props) {
                 }
             });
     }, []);
-
-    const loadFile = (filename) => {
-        return fs.getFile(filename)
-            .then((file) => {
-                setCode(filename, file);
-            });
-    };
 
     return (
         <Fragment>

@@ -23,6 +23,7 @@
   "scripts": {
     "start": "node app.js",
     "build": "parcel watch src/index.html",
+    "serve": "parcel serve src/index.html",
     "build:prod": "parcel build src/index.html"
   },
   "sideEffects": false

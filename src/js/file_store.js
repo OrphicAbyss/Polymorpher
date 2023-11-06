@@ -68,6 +68,9 @@ export function FS () {
     const getFile = (filename) => {
         return get(filename, fileStore);
     }
+    const exists = async (filename) => {
+        return (await keys(fileStore)).includes(filename);
+    }
     const setFile = (filename, data) => {
         return set(filename, data, fileStore);
     }
@@ -91,6 +94,7 @@ export function FS () {
     return {
         getFilenames,
         getFile,
+        exists,
         setFile,
         delFile,
         reset,
